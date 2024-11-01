@@ -1,40 +1,31 @@
 import pygame as pg
-from settings import *
+from settings import GREEN, TILESIZE
 
 class Spritesheet:
-    def __init__(self, filename):
+    def __init__(self, filename, pixel_size):
         try:
             self.sheet = pg.image.load(filename).convert_alpha()
+            self.pixel_size = pixel_size
         except pg.error as e:
             raise FileNotFoundError(e)
         
-    # Load a specific image from a specific rectangle
-    def image_at(self, rectangle, colorkey = None):
-        "Loads image from x,y,x+offset,y+offset"
-        # temp for current sprite sheet
-        rectangle = list(rectangle)
-        rectangle[0]+=40
-        rectangle[1]+=30
-        rectangle[2]-=40
-        rectangle[3]-=40
-        #### 
+    def image_at(self, sprite_coordinate: tuple) -> pg.Surface:
+        x, y = sprite_coordinate
+        upscale = 30
+        rect = pg.Rect(x*self.pixel_size+upscale+10, y*self.pixel_size+upscale, self.pixel_size-upscale-10, self.pixel_size-upscale)
+        try:
+            image = self.sheet.subsurface(rect)
+        except ValueError as e:
+            raise ValueError('Exceeded spritesheet dimensions!', e)
+        
+        image = pg.transform.scale(image, (TILESIZE*((TILESIZE+upscale)/TILESIZE), TILESIZE*((TILESIZE+upscale)/TILESIZE)))
 
-        rect = pg.Rect(rectangle)#.scale_by(1-64/150, 1-64/150)
-        image = self.sheet.subsurface(rect)
-        # image = pg.Surface(rect.size).convert_alpha()
-        image = pg.transform.scale(image, (64, 64))
-        # image.blit(self.sheet, (0, 0), rect)
-
-        if colorkey is not None:
-            if colorkey == -1:
-                colorkey = image.get_at((0,0))
-            image.set_colorkey(colorkey, pg.RLEACCEL)
         return image
     
 
-    def images_at(self, rects, colorkey = None):
-        "Loads multiple images, supply a list of coordinates" 
-        return [self.image_at(rect, colorkey) for rect in rects]
+    # def images_at(self, rects):
+    #     "Loads multiple images, supply a list of coordinates" 
+    #     return [self.image_at(rect) for rect in rects]
     
 
 class Player(pg.sprite.Sprite):
@@ -42,10 +33,10 @@ class Player(pg.sprite.Sprite):
         self.groups = game.all_sprites
         pg.sprite.Sprite.__init__(self, self.groups)
 
-        self.spritesheet = Spritesheet('assets/Player/Warrior_Red.png')
+        self.spritesheet = Spritesheet('assets/Player/Warrior_Red.png', 192)
         
         self.game = game
-        self.image = self.spritesheet.image_at((0, 0, 150, 150))#pg.Surface((TILESIZE, TILESIZE))
+        self.image = self.spritesheet.image_at((0, 0))
         self.rect = self.image.get_rect()
         self.x_pos = init_x_pos
         self.y_pos = init_y_pos
