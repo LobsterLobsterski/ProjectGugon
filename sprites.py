@@ -1,6 +1,13 @@
 import pygame as pg
+from enum import Enum
+
 from settings import GREEN, TILESIZE
 
+class Direction(Enum):
+    UP = 1
+    DOWN = 2
+    LEFT = 3
+    RIGHT = 4
 
 class Spritesheet:
     def __init__(self, filename, pixel_size):
@@ -10,16 +17,16 @@ class Spritesheet:
         except pg.error as e:
             raise FileNotFoundError(e)
         
-    def image_at(self, sprite_coordinate: tuple) -> pg.Surface:
+    def image_at(self, sprite_coordinate: tuple, x_offset=10) -> pg.Surface:
         x, y = sprite_coordinate
-        upscale = 30
-        rect = pg.Rect(x*self.pixel_size+upscale+10, y*self.pixel_size+upscale, self.pixel_size-upscale-10, self.pixel_size-upscale)
+        crop=30
+        rect = pg.Rect(x*self.pixel_size+crop+x_offset, y*self.pixel_size+crop, self.pixel_size-crop-x_offset, self.pixel_size-crop)
         try:
             image = self.sheet.subsurface(rect)
         except ValueError as e:
             raise ValueError('Exceeded spritesheet dimensions!', e)
         
-        image = pg.transform.scale(image, (TILESIZE*((TILESIZE+upscale)/TILESIZE), TILESIZE*((TILESIZE+upscale)/TILESIZE)))
+        image = pg.transform.scale(image, (TILESIZE*((TILESIZE+crop)/TILESIZE), TILESIZE*((TILESIZE+crop)/TILESIZE)))
 
         return image
     
@@ -47,9 +54,19 @@ class Player(gameObject):
 
         self.game = game
         self.rect = self.image.get_rect()
+        self.direction = Direction.RIGHT
 
     def move(self, dx=0, dy=0):
         if not self.wall_collision(dx, dy):
+            if dx > 0:
+                self.direction = Direction.RIGHT
+            elif dx < 0:
+                self.direction = Direction.LEFT
+            elif dy > 0:
+                self.direction = Direction.DOWN
+            elif dy < 0:
+                self.direction = Direction.UP
+
             self.x_pos += dx
             self.y_pos += dy
 
@@ -63,6 +80,15 @@ class Player(gameObject):
     def update(self):
         self.rect.x = self.x_pos * TILESIZE
         self.rect.y = self.y_pos * TILESIZE
+        if self.direction == Direction.RIGHT:
+            self.image = self.spritesheet.image_at((0, 0))
+        elif self.direction == Direction.LEFT:
+            self.image = pg.transform.flip(self.spritesheet.image_at((0, 0), x_offset=-30), flip_x=True, flip_y=False)
+        if self.direction == Direction.UP:
+            self.image = self.spritesheet.image_at((5, 7))
+        elif self.direction == Direction.DOWN:
+            self.image = self.spritesheet.image_at((5, 5))
+        
 
 class Wall(gameObject):
     def __init__(self, sprite_groups: tuple, x_pos: int, y_pos: int):
