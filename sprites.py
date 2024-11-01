@@ -1,6 +1,7 @@
 import pygame as pg
 from settings import GREEN, TILESIZE
 
+
 class Spritesheet:
     def __init__(self, filename, pixel_size):
         try:
@@ -27,20 +28,25 @@ class Spritesheet:
     #     "Loads multiple images, supply a list of coordinates" 
     #     return [self.image_at(rect) for rect in rects]
     
+class gameObject(pg.sprite.Sprite):
+    def __init__(self, groups, image, x, y):
+        pg.sprite.Sprite.__init__(self, groups)
+        self.image = image
+        self.x_pos = x
+        self.y_pos = y
 
-class Player(pg.sprite.Sprite):
+
+class Player(gameObject):
     def __init__(self, game: any, init_x_pos: int, init_y_pos: int):
-        self.groups = game.all_sprites
-        pg.sprite.Sprite.__init__(self, self.groups)
-
         self.spritesheet = Spritesheet('assets/Player/Warrior_Red.png', 192)
-        
-        self.game = game
-        self.image = self.spritesheet.image_at((0, 0))
-        self.rect = self.image.get_rect()
-        self.x_pos = init_x_pos
-        self.y_pos = init_y_pos
 
+        gameObject.__init__(self, game.all_sprites, 
+                            self.spritesheet.image_at((0, 0)),
+                            init_x_pos, init_y_pos
+                            )
+
+        self.game = game
+        self.rect = self.image.get_rect()
 
     def move(self, dx=0, dy=0):
         if not self.wall_collision(dx, dy):
@@ -58,15 +64,15 @@ class Player(pg.sprite.Sprite):
         self.rect.x = self.x_pos * TILESIZE
         self.rect.y = self.y_pos * TILESIZE
 
-class Wall(pg.sprite.Sprite):
+class Wall(gameObject):
     def __init__(self, sprite_groups: tuple, x_pos: int, y_pos: int):
-        self.groups = sprite_groups
+        gameObject.__init__(self, sprite_groups, 
+                            pg.Surface((TILESIZE, TILESIZE)),
+                            x_pos,
+                            y_pos
+                            )
 
-        pg.sprite.Sprite.__init__(self, self.groups)
-        self.image = pg.Surface((TILESIZE, TILESIZE))
         self.image.fill(GREEN)
         self.rect = self.image.get_rect()
-        self.x_pos = x_pos
-        self.y_pos = y_pos
         self.rect.x = x_pos * TILESIZE
         self.rect.y = y_pos * TILESIZE
