@@ -3,7 +3,7 @@ import sys
 
 from map import Map, Viewport
 from settings import BGCOLOR, FPS, HEIGHT, LIGHTGREY, TILESIZE, TITLE, WIDTH
-from sprites import Player
+from sprites import Mob, Player
 
 class Game:
     def __init__(self):
@@ -15,13 +15,17 @@ class Game:
 
     def new(self):
         self.all_sprites = pg.sprite.Group()
-        self.walls = pg.sprite.Group()
+        self.background_layer = pg.sprite.Group()
+        self.interactable_layer = pg.sprite.Group()
+        self.action_layer = pg.sprite.Group()
+
         self.player = Player(self, 5, 5)
+        Mob((self.all_sprites, self.action_layer), 7, 7)
         self.map = self.init_map()
         self.viewport = Viewport(self.map.tile_width, self.map.tile_height)
 
     def init_map(self) -> Map:
-        return Map((self.all_sprites, self.walls), (64, 48))
+        return Map((self.all_sprites, self.background_layer), (64, 48))
     
     def run(self):
         self.playing = True
@@ -40,13 +44,22 @@ class Game:
         self.viewport.update(self.player)
     
     def draw(self):
+        pg.display.set_caption("{:.2f}".format(self.clock.get_fps()))
         self.screen.fill(BGCOLOR)
         self.draw_grid()
-        self.draw_all_sprites()
+        self.draw_background_sprites()
+        self.draw_interactable_sprites()
+        self.draw_action_sprites()
         pg.display.flip()
 
-    def draw_all_sprites(self):
-        for sprite in self.all_sprites:
+    def draw_background_sprites(self):
+        for sprite in self.background_layer:
+            self.screen.blit(sprite.image, self.viewport.apply_offset(sprite.rect))
+    def draw_interactable_sprites(self):
+        for sprite in self.interactable_layer:
+            self.screen.blit(sprite.image, self.viewport.apply_offset(sprite.rect))
+    def draw_action_sprites(self):
+        for sprite in self.action_layer:
             self.screen.blit(sprite.image, self.viewport.apply_offset(sprite.rect))
 
     def draw_grid(self):

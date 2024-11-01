@@ -1,7 +1,8 @@
+from typing import Iterable
 import pygame as pg
 from enum import Enum
 
-from settings import GREEN, TILESIZE
+from settings import GREEN, MOB_SPRITE_SHEET, MOB_SPRITE_SHEET_SPRITE_SIZE, PLAYER_SPRITE_SHEET, PLAYER_SPRITE_SHEET_SPRITE_SIZE, TILESIZE
 
 class Direction(Enum):
     UP = 1
@@ -34,44 +35,51 @@ class Spritesheet:
     # def images_at(self, rects):
     #     "Loads multiple images, supply a list of coordinates" 
     #     return [self.image_at(rect) for rect in rects]
-    
+
+
 class gameObject(pg.sprite.Sprite):
-    def __init__(self, groups, image, x, y):
+    def __init__(self, groups: Iterable, image: pg.Surface, x: int, y: int):
         pg.sprite.Sprite.__init__(self, groups)
         self.image = image
         self.x_pos = x
         self.y_pos = y
+        self.rect = self.image.get_rect()
 
 
 class Player(gameObject):
     def __init__(self, game: any, init_x_pos: int, init_y_pos: int):
-        self.spritesheet = Spritesheet('assets/Player/Warrior_Red.png', 192)
+        self.spritesheet = Spritesheet(PLAYER_SPRITE_SHEET, PLAYER_SPRITE_SHEET_SPRITE_SIZE)
 
-        gameObject.__init__(self, game.all_sprites, 
+        super().__init__((game.all_sprites, game.action_layer), 
                             self.spritesheet.image_at((0, 0)),
                             init_x_pos, init_y_pos
                             )
 
         self.game = game
-        self.rect = self.image.get_rect()
         self.direction = Direction.RIGHT
 
     def move(self, dx=0, dy=0):
-        if not self.wall_collision(dx, dy):
-            if dx > 0:
-                self.direction = Direction.RIGHT
-            elif dx < 0:
-                self.direction = Direction.LEFT
-            elif dy > 0:
-                self.direction = Direction.DOWN
-            elif dy < 0:
-                self.direction = Direction.UP
-
+        self.change_direction(dx, dy)
+        if not self.collision(dx, dy):
             self.x_pos += dx
             self.y_pos += dy
 
-    def wall_collision(self, dx=0, dy=0):
-        for wall in self.game.walls:
+    def change_direction(self, dx, dy):
+        if dx > 0:
+            self.direction = Direction.RIGHT
+        elif dx < 0:
+            self.direction = Direction.LEFT
+        elif dy > 0:
+            self.direction = Direction.DOWN
+        elif dy < 0:
+            self.direction = Direction.UP
+        
+    def collision(self, dx=0, dy=0):
+        ###unify this somehow
+        for wall in self.game.background_layer:
+            if wall.x_pos == self.x_pos+dx and wall.y_pos == self.y_pos+dy:
+                return True
+        for wall in self.game.action_layer:
             if wall.x_pos == self.x_pos+dx and wall.y_pos == self.y_pos+dy:
                 return True
         
@@ -90,15 +98,22 @@ class Player(gameObject):
             self.image = self.spritesheet.image_at((5, 5))
         
 
+class Mob(gameObject):
+    def __init__(self, groups: Iterable, init_x_pos: int, init_y_pos: int):
+        self.spritesheet = Spritesheet(MOB_SPRITE_SHEET, MOB_SPRITE_SHEET_SPRITE_SIZE)
+        super().__init__(groups, self.spritesheet.image_at((0, 0)), init_x_pos, init_y_pos)
+        self.rect.x = self.x_pos * TILESIZE
+        self.rect.y = self.y_pos * TILESIZE
+
+
 class Wall(gameObject):
-    def __init__(self, sprite_groups: tuple, x_pos: int, y_pos: int):
-        gameObject.__init__(self, sprite_groups, 
+    def __init__(self, sprite_groups: Iterable, x_pos: int, y_pos: int):
+        super().__init__(sprite_groups, 
                             pg.Surface((TILESIZE, TILESIZE)),
                             x_pos,
                             y_pos
                             )
 
         self.image.fill(GREEN)
-        self.rect = self.image.get_rect()
         self.rect.x = x_pos * TILESIZE
         self.rect.y = y_pos * TILESIZE
