@@ -1,8 +1,9 @@
 import pygame as pg
 import sys
 
+from map import Map, Viewport
 from settings import BGCOLOR, FPS, HEIGHT, LIGHTGREY, TILESIZE, TITLE, WIDTH
-from sprites import Player, Wall
+from sprites import Player
 
 class Game:
     def __init__(self):
@@ -11,20 +12,16 @@ class Game:
         pg.display.set_caption(TITLE)
         self.clock = pg.time.Clock()
         pg.key.set_repeat(100, 100)
-        self.load_data()
-
-    def load_data(self):
-        pass
 
     def new(self):
         self.all_sprites = pg.sprite.Group()
         self.walls = pg.sprite.Group()
-        self.player = Player(self, 0, 0)
-        self.spawn_walls()
+        self.player = Player(self, 5, 5)
+        self.map = self.init_map()
+        self.viewport = Viewport(self.map.tile_width, self.map.tile_height)
 
-    def spawn_walls(self):
-        for x in range(10, 20):
-            Wall(self, x, 10)
+    def init_map(self) -> Map:
+        return Map((self.all_sprites, self.walls), (64, 48))
     
     def run(self):
         self.playing = True
@@ -40,11 +37,14 @@ class Game:
 
     def update(self):
         self.all_sprites.update()
+        self.viewport.update(self.player)
     
     def draw(self):
         self.screen.fill(BGCOLOR)
         self.draw_grid()
-        self.all_sprites.draw(self.screen)
+        # self.all_sprites.draw(self.screen)
+        for sprite in self.all_sprites:
+            self.screen.blit(sprite.image, self.viewport.apply_offset(sprite.rect))
         pg.display.flip()
 
     def draw_grid(self):
