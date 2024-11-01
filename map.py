@@ -1,3 +1,4 @@
+import random
 from pygame import Rect, sprite
 from settings import HEIGHT, WIDTH
 from sprites import Wall
@@ -14,6 +15,10 @@ class Map:
             for y in range(self.tile_height):
                 if x in (0, self.tile_width-1) or y in (0, self.tile_height-1):
                     Wall(sprite_groups, x, y)
+        for _ in range(300):
+            x = random.randint(1, self.tile_width)
+            y = random.randint(1, self.tile_height)
+            Wall(sprite_groups, x, y)
 
 
 class Viewport:
@@ -23,6 +28,9 @@ class Viewport:
         self.tile_height = tile_height
     
     def apply_offset(self, entity_rect: Rect) -> Rect:
+        # watch ep 4 for limiting camera
+        # didnt implement it as we dont want 
+        # player to know where the map ends anyways
         return entity_rect.move(self.viewport.topleft)
     
     def update(self, target: sprite.Sprite):

@@ -42,10 +42,12 @@ class Game:
     def draw(self):
         self.screen.fill(BGCOLOR)
         self.draw_grid()
-        # self.all_sprites.draw(self.screen)
+        self.draw_all_sprites()
+        pg.display.flip()
+
+    def draw_all_sprites(self):
         for sprite in self.all_sprites:
             self.screen.blit(sprite.image, self.viewport.apply_offset(sprite.rect))
-        pg.display.flip()
 
     def draw_grid(self):
         for vertical_line_pos in range(0, WIDTH, TILESIZE):
