@@ -1,4 +1,4 @@
-from typing import Iterable
+from typing import Any, Iterable
 import pygame as pg
 from enum import Enum
 
@@ -44,18 +44,22 @@ class gameObject(pg.sprite.Sprite):
         self.x_pos = x
         self.y_pos = y
         self.rect = self.image.get_rect()
+    
+    def place(self, new_x, new_y):
+        self.x_pos = new_x
+        self.y_pos = new_y
 
 
 class Player(gameObject):
-    def __init__(self, game: any, init_x_pos: int, init_y_pos: int):
+    def __init__(self, groups: Iterable, collision_layers: tuple, init_x_pos: int, init_y_pos: int):
         self.spritesheet = Spritesheet(PLAYER_SPRITE_SHEET, PLAYER_SPRITE_SHEET_SPRITE_SIZE)
 
-        super().__init__((game.all_sprites, game.action_layer), 
+        super().__init__(groups, 
                             self.spritesheet.image_at((0, 0)),
                             init_x_pos, init_y_pos
                             )
 
-        self.game = game
+        self.collision_layers = collision_layers
         self.direction = Direction.RIGHT
 
     def move(self, dx=0, dy=0):
@@ -63,7 +67,7 @@ class Player(gameObject):
         if not self.collision(dx, dy):
             self.x_pos += dx
             self.y_pos += dy
-
+    
     def change_direction(self, dx, dy):
         if dx > 0:
             self.direction = Direction.RIGHT
@@ -75,14 +79,11 @@ class Player(gameObject):
             self.direction = Direction.UP
         
     def collision(self, dx=0, dy=0):
-        ###unify this somehow
-        for wall in self.game.background_layer:
-            if wall.x_pos == self.x_pos+dx and wall.y_pos == self.y_pos+dy:
-                return True
-        for wall in self.game.action_layer:
-            if wall.x_pos == self.x_pos+dx and wall.y_pos == self.y_pos+dy:
-                return True
-        
+        for layer in self.collision_layers:
+            for object in layer:
+                if object.x_pos == self.x_pos+dx and object.y_pos == self.y_pos+dy:
+                    return True
+
         return False
 
     def update(self):
@@ -104,6 +105,13 @@ class Mob(gameObject):
         super().__init__(groups, self.spritesheet.image_at((0, 0)), init_x_pos, init_y_pos)
         self.rect.x = self.x_pos * TILESIZE
         self.rect.y = self.y_pos * TILESIZE
+
+    def move(self):
+        # path find towards player
+        pass
+
+    def update(self):
+        pass
 
 
 class Wall(gameObject):

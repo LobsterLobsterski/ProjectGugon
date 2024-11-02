@@ -1,24 +1,152 @@
+from enum import IntEnum
 import random
+from typing import Iterable
 from pygame import Rect, sprite
 from settings import HEIGHT, WIDTH
 from sprites import Wall
 
+class TileType(IntEnum):
+    Wall = 0
+    Floor = 1
+    Player = 2
+    Mob = 3
+
+class Room:
+    def __init__(self, x, y, width, height):
+        self.x = x
+        self.y = y
+        self.width = width
+        self.height = height
+
+    def __repr__(self):
+        return f'Room({self.x}, {self.y}, {self.width}, {self.height})'
+
+    def set_x(self, x):
+        self.x = x
+    def set_y(self, y):
+        self.y = y
+    def set_width(self, width):
+        self.width = width
+    def set_height(self, height):
+        self.height = height
 
 class Map:
-    def __init__(self, sprite_groups: tuple, map_size=(32, 24)):
+    def __init__(self, sprite_groups: tuple, map_size: tuple[int, int]):
         self.tile_width, self.tile_height = map_size
-        self.generate_map(sprite_groups)
+        self.sprite_groups = sprite_groups
+        self.rooms = []
+        self.generate_map()
 
-    def generate_map(self, sprite_groups: tuple) -> list:
-        #TODO: procedural generation
+    def encase_map(self):
         for x in range(self.tile_width):
             for y in range(self.tile_height):
-                if x in (0, self.tile_width-1) or y in (0, self.tile_height-1):
-                    Wall(sprite_groups, x, y)
-        for _ in range(300):
+                if x in (0, self.tile_width-2) or y in (0, self.tile_height-2):
+                    Wall(self.sprite_groups, x, y)
+
+    def generate_map(self):
+        # self.random(300)
+        self.binary_space_partition()
+        
+    def _get_random_floor(self) -> tuple[int, int]:
+            room = random.choice(self.rooms)
+            return random.randint(room.x, room.x+room.width), random.randint(room.y, room.y+room.height)
+
+    def get_initial_player_pos(self) -> tuple[int, int]:
+        return self._get_random_floor()
+    
+    def get_mob_positions(self, num_of_positions) -> list[tuple[int, int]]:
+        return [self._get_random_floor() for _ in range(num_of_positions)]
+    
+    def random(self, num_of_walls: int):
+        for x in range(self.tile_width):
+            for y in range(self.tile_height):
+                if x in (0, self.tile_width-2) or y in (0, self.tile_height-2):
+                    Wall(self.sprite_groups, x, y)
+
+        for _ in range(num_of_walls):
             x = random.randint(1, self.tile_width)
             y = random.randint(1, self.tile_height)
-            Wall(sprite_groups, x, y)
+            Wall(self.sprite_groups, x, y)
+
+    def binary_space_partition(self, debug=0):
+        '''
+        orderly rooms, dijkstra map to find 
+        'essential rooms' and force exploration
+        for the sake of progression
+        '''
+        def make_room(min_splits: int, max_splits: int, debug=False) -> Room:
+            #-1 so they dont spawn in outside walls
+            room = Room(1, 1, self.tile_width-1, self.tile_height-1)
+            NUM_OF_SPLITS = random.randint(min_splits, max_splits)
+            is_vertical_split = True
+            if debug:
+                print('\n', NUM_OF_SPLITS)
+            for _ in range(NUM_OF_SPLITS):
+                take_second_split = bool(random.getrandbits(1))
+                is_vertical_split = not is_vertical_split
+                
+                if is_vertical_split:
+                    if take_second_split:
+                        room.set_x(room.x+room.width//2)
+                    room.set_width(room.width//2)
+                else:
+                    if take_second_split:
+                        room.set_y(room.y+room.height//2)
+                    room.set_height(room.height//2)
+
+                if debug:
+                    print('\ttake second part' if take_second_split else '\ttake first part')
+                    print('\t\t', room)
+
+            return room
+
+        def add_room_to_map(room: Room):
+            for row in range(room.y, room.y+room.height):
+                for col in range(room.x, room.x+room.width):
+                    map[row][col] = TileType.Floor
+        
+        def change_tile(row: int, col: int, tile_type: TileType):
+            map[row][col] = tile_type
+
+        def create_walls():
+            for y, row in enumerate(map):
+                for x, tile in enumerate(row):
+                    if tile == TileType.Wall:
+                        Wall(self.sprite_groups, x, y)
+
+        def encase_map():
+            for row in range(self.tile_height):
+                for col in range(self.tile_width):
+                    if col in (0, self.tile_width-1) or row in (0, self.tile_height-1):
+                        map[row][col] = TileType.Wall
+
+        def make_corridors():
+            pass
+        
+        map = [[TileType.Wall for _ in range(self.tile_width)] for _ in range(self.tile_height)]
+        NUM_OF_ROOMS = 10
+        for i in range(NUM_OF_ROOMS):
+            min, max = (3, 5) if i<2 else (5, 6) if i<7 else (4, 8)
+            room = make_room(min_splits=min, max_splits=max, debug=debug)
+            add_room_to_map(room)
+            self.rooms.append(room)
+
+            if debug: print('made room of coords:', room)
+        
+        encase_map()
+        if debug:
+            print('map:')
+            for row in map:
+                print([int(i) for i in row])
+        create_walls()
+
+    def cellular_automata(self):
+        # messy cavern
+        # might need to cull unreachable areas
+        pass
+    def drunken_stumble(self):
+        # carved out
+        pass
 
 
 class Viewport:

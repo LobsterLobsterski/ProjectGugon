@@ -19,13 +19,18 @@ class Game:
         self.interactable_layer = pg.sprite.Group()
         self.action_layer = pg.sprite.Group()
 
-        self.player = Player(self, 5, 5)
-        Mob((self.all_sprites, self.action_layer), 7, 7)
-        self.map = self.init_map()
+        self.map = Map((self.all_sprites, self.background_layer), 
+                       (64, 48))
+
+        player_pos_x, player_pos_y = self.map.get_initial_player_pos()
+        self.player = Player((self.all_sprites, self.action_layer), 
+                             (self.background_layer, self.action_layer), 
+                             player_pos_x, player_pos_y)
+        mob_positions = self.map.get_mob_positions(1)
+        mobs = [Mob((self.all_sprites, self.action_layer), x, y) for x, y in mob_positions]
+
         self.viewport = Viewport(self.map.tile_width, self.map.tile_height)
 
-    def init_map(self) -> Map:
-        return Map((self.all_sprites, self.background_layer), (64, 48))
     
     def run(self):
         self.playing = True
