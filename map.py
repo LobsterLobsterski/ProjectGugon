@@ -1,5 +1,7 @@
 from enum import IntEnum
+from itertools import tee
 import random
+import sys
 from typing import Iterable
 from pygame import Rect, sprite
 from settings import HEIGHT, WIDTH
@@ -21,6 +23,9 @@ class Room:
     def __repr__(self):
         return f'Room({self.x}, {self.y}, {self.width}, {self.height})'
 
+    def get_random_tile(self):
+        return random.randint(self.x, self.x+self.width-1), random.randint(self.y, self.y+self.height-1)
+    
     def set_x(self, x):
         self.x = x
     def set_y(self, y):
@@ -37,6 +42,11 @@ class Map:
         self.rooms = []
         self.generate_map()
 
+    def pairwise(self, iterable: Iterable):
+        a, b = tee(iterable)
+        next(b, None)
+        return zip(a, b)
+    
     def encase_map(self):
         for x in range(self.tile_width):
             for y in range(self.tile_height):
@@ -68,13 +78,13 @@ class Map:
             y = random.randint(1, self.tile_height)
             Wall(self.sprite_groups, x, y)
 
-    def binary_space_partition(self, debug=0):
+    def binary_space_partition(self, debug=False):
         '''
         orderly rooms, dijkstra map to find 
         'essential rooms' and force exploration
         for the sake of progression
         '''
-        def make_room(min_splits: int, max_splits: int, debug=False) -> Room:
+        def make_room(min_splits: int, max_splits: int) -> Room:
             #-1 so they dont spawn in outside walls
             room = Room(1, 1, self.tile_width-1, self.tile_height-1)
             NUM_OF_SPLITS = random.randint(min_splits, max_splits)
@@ -104,9 +114,6 @@ class Map:
             for row in range(room.y, room.y+room.height):
                 for col in range(room.x, room.x+room.width):
                     map[row][col] = TileType.Floor
-        
-        def change_tile(row: int, col: int, tile_type: TileType):
-            map[row][col] = tile_type
 
         def create_walls():
             for y, row in enumerate(map):
@@ -120,20 +127,40 @@ class Map:
                     if col in (0, self.tile_width-1) or row in (0, self.tile_height-1):
                         map[row][col] = TileType.Wall
 
-        def make_corridors():
-            pass
+        def make_corridor(start: tuple[int, int], finish: tuple[int, int], is_vertical: bool):
+            y0, y1 = sorted((start[1], finish[1]))
+            x0, x1 = sorted((start[0], finish[0]))
+
+            if is_vertical:
+                for y_id in range(y0, y1+1):
+                    map[y_id][start[0]] = TileType.Floor
+
+                for x_id in range(x0, x1+1):
+                    map[finish[1]][x_id] = TileType.Floor
+            else:
+                for x_id in range(x0, x1+1):
+                    map[finish[1]][x_id] = TileType.Floor
+
+                for y_id in range(y0, y1+1):
+                    map[y_id][start[0]] = TileType.Floor
+        
+        def add_corridors_to_map():
+            for room, room2 in self.pairwise(self.rooms):
+                start, finish = room.get_random_tile(), room2.get_random_tile()
+                make_corridor(start, finish, is_vertical=bool(random.getrandbits(1)))     
         
         map = [[TileType.Wall for _ in range(self.tile_width)] for _ in range(self.tile_height)]
         NUM_OF_ROOMS = 10
         for i in range(NUM_OF_ROOMS):
-            min, max = (3, 5) if i<2 else (5, 6) if i<7 else (4, 8)
-            room = make_room(min_splits=min, max_splits=max, debug=debug)
+            min_splits, max_splits = (3, 5) if i<2 else (5, 6) if i<7 else (4, 8)
+            room = make_room(min_splits, max_splits)
             add_room_to_map(room)
             self.rooms.append(room)
 
             if debug: print('made room of coords:', room)
         
         encase_map()
+        add_corridors_to_map()
         if debug:
             print('map:')
             for row in map:
@@ -144,6 +171,7 @@ class Map:
         # messy cavern
         # might need to cull unreachable areas
         pass
+    
     def drunken_stumble(self):
         # carved out
         pass
