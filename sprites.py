@@ -1,3 +1,4 @@
+import random
 from typing import Any, Iterable
 import pygame as pg
 from enum import Enum
@@ -38,12 +39,15 @@ class Spritesheet:
 
 
 class gameObject(pg.sprite.Sprite):
+    number_of_obejects=0
     def __init__(self, groups: Iterable, image: pg.Surface, x: int, y: int):
         pg.sprite.Sprite.__init__(self, groups)
         self.image = image
         self.x_pos = x
         self.y_pos = y
         self.rect = self.image.get_rect()
+        self.id = gameObject.number_of_obejects
+        gameObject.number_of_obejects+=1
     
     def place(self, new_x, new_y):
         self.x_pos = new_x
@@ -62,7 +66,17 @@ class Player(gameObject):
         self.collision_layers = collision_layers
         self.direction = Direction.RIGHT
 
-    def move(self, dx=0, dy=0):
+    def move(self, key: pg.event):
+        dx, dy = 0, 0
+        if key == pg.K_LEFT:
+           dx=-1
+        if key == pg.K_RIGHT:
+            dx=1
+        if key == pg.K_UP:
+            dy=-1
+        if key == pg.K_DOWN:
+            dy=1
+
         self.change_direction(dx, dy)
         if not self.collision(dx, dy):
             self.x_pos += dx
@@ -100,18 +114,26 @@ class Player(gameObject):
         
 
 class Mob(gameObject):
-    def __init__(self, groups: Iterable, init_x_pos: int, init_y_pos: int):
+    def __init__(self, game, groups: Iterable, init_x_pos: int, init_y_pos: int):
         self.spritesheet = Spritesheet(MOB_SPRITE_SHEET, MOB_SPRITE_SHEET_SPRITE_SIZE)
         super().__init__(groups, self.spritesheet.image_at((0, 0)), init_x_pos, init_y_pos)
         self.rect.x = self.x_pos * TILESIZE
         self.rect.y = self.y_pos * TILESIZE
+        self.game = game
+    
+    def act(self):
+        print(f'Mob {self.id} acts:')
+        # randomly moves left or right for now
+        self.move(dx=1*random.choice([1, -1]))
 
-    def move(self):
-        # path find towards player
-        pass
+    def move(self, dx=0, dy=0):
+        print('\tMob movement')
+        self.x_pos += dx
+        self.y_pos += dy
 
     def update(self):
-        pass
+        self.rect.x = self.x_pos * TILESIZE
+        self.rect.y = self.y_pos * TILESIZE
 
 
 class Wall(gameObject):
