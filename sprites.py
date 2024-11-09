@@ -129,24 +129,48 @@ class Mob(gameObject):
         self.rect.y = self.y_pos * TILESIZE
         self.game = game
         self.pathfinder = Pathfinder(game.map)
+        ### separate class?
         self.path = []
         self.path_iterator = iter(self.path)
+        ###
+        self.last_known_player_pos = self.game.player.get_position()
     
+    def player_has_moved(self):
+        return self.last_known_player_pos != self.game.player.get_position()
+    
+    def update_path(self):
+        if self.player_has_moved():
+            self.last_known_player_pos = self.game.player.get_position()
+            self.path = self.pathfinder.find_path(self.get_position(), self.last_known_player_pos)[1:-1]
+            self.path_iterator = iter(self.path)
+
     def act(self):
-        # if player_changed_position():
-        self.path = self.pathfinder.find_path(self.get_position(), self.game.player.get_position())[1:-1]
-        self.path_iterator = iter(self.path)
-        print(f'Mob {self.id} acts: {self.path}')
-        # randomly moves left or right for now
-        try:
-            self.place(next(self.path_iterator))
-        except StopIteration:
-            pass
+        print(f'Mob {self.id} acts:')
+        self.update_path()
+        
+        ###decide action
+        self.follow_path()
+        
 
     def move(self, dx=0, dy=0):
         # print('\tMob movement')
         self.x_pos += dx
         self.y_pos += dy
+
+    def check_collisions(self, new_pos: tuple[int, int]):
+        #temp
+        return False
+
+    def follow_path(self):
+        print('\tmoves towards player')
+        try:
+            new_pos = next(self.path_iterator)
+        except StopIteration:
+            return
+        if self.check_collisions(new_pos):
+            return
+        
+        self.place(new_pos)
 
     def update(self):
         self.rect.x = self.x_pos * TILESIZE

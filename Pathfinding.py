@@ -11,7 +11,7 @@ class Pathfinder:
     def find_path(self, start: tuple, end: tuple) -> list[tuple[int, int]]:
         start = self.grid.node(start[0], start[1])
         end = self.grid.node(end[0], end[1])
-        print(f'start {start} -> end {end}')
+        # print(f'start {start} -> end {end}')
         path, runs = self.finder.find_path(start, end, self.grid)
         path = [(n.x, n.y) for n in path]
         return path
