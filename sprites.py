@@ -3,6 +3,7 @@ from typing import Any, Iterable
 import pygame as pg
 from enum import Enum
 
+from AI.BehaviourTree import BahaviourTree
 from Pathfinding import Pathfinder
 from settings import GREEN, MOB_SPRITE_SHEET, MOB_SPRITE_SHEET_SPRITE_SIZE, PLAYER_SPRITE_SHEET, PLAYER_SPRITE_SHEET_SPRITE_SIZE, TILESIZE
 
@@ -134,6 +135,8 @@ class Mob(gameObject):
         self.path_iterator = iter(self.path)
         ###
         self.last_known_player_pos = self.game.player.get_position()
+
+        self.bahaviour_tree = BahaviourTree(self)
     
     def player_has_moved(self):
         return self.last_known_player_pos != self.game.player.get_position()
@@ -146,9 +149,11 @@ class Mob(gameObject):
 
     def act(self):
         print(f'Mob {self.id} acts:')
-        self.update_path()
+
+        action = self.bahaviour_tree.find_action()
+        action()
         
-        ###decide action
+        self.update_path()
         self.follow_path()
         
 

@@ -31,7 +31,7 @@ class Game:
         self.player = Player((self.all_sprites, self.player_layer), 
                              (self.background_layer, self.mob_layer), 
                              player_pos_x, player_pos_y)
-        mob_positions = self.map.get_mob_positions(2)
+        mob_positions = self.map.get_mob_positions(1)
         self.mobs = [Mob(self, (self.all_sprites, self.mob_layer), x, y) for x, y in mob_positions]
 
         self.viewport = Viewport(self.map.tile_width, self.map.tile_height)
