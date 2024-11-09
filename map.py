@@ -40,6 +40,7 @@ class Map:
         self.tile_width, self.tile_height = map_size
         self.sprite_groups = sprite_groups
         self.rooms = []
+        self.map = []
         self.generate_map()
 
     def pairwise(self, iterable: Iterable):
@@ -113,10 +114,10 @@ class Map:
         def add_room_to_map(room: Room):
             for row in range(room.y, room.y+room.height):
                 for col in range(room.x, room.x+room.width):
-                    map[row][col] = TileType.Floor
+                    self.map[row][col] = TileType.Floor
 
         def create_walls():
-            for y, row in enumerate(map):
+            for y, row in enumerate(self.map):
                 for x, tile in enumerate(row):
                     if tile == TileType.Wall:
                         Wall(self.sprite_groups, x, y)
@@ -125,7 +126,7 @@ class Map:
             for row in range(self.tile_height):
                 for col in range(self.tile_width):
                     if col in (0, self.tile_width-1) or row in (0, self.tile_height-1):
-                        map[row][col] = TileType.Wall
+                        self.map[row][col] = TileType.Wall
 
         def make_corridor(start: tuple[int, int], finish: tuple[int, int], is_vertical: bool):
             y0, y1 = sorted((start[1], finish[1]))
@@ -133,23 +134,23 @@ class Map:
 
             if is_vertical:
                 for y_id in range(y0, y1+1):
-                    map[y_id][start[0]] = TileType.Floor
+                    self.map[y_id][start[0]] = TileType.Floor
 
                 for x_id in range(x0, x1+1):
-                    map[finish[1]][x_id] = TileType.Floor
+                    self.map[finish[1]][x_id] = TileType.Floor
             else:
                 for x_id in range(x0, x1+1):
-                    map[finish[1]][x_id] = TileType.Floor
+                    self.map[finish[1]][x_id] = TileType.Floor
 
                 for y_id in range(y0, y1+1):
-                    map[y_id][start[0]] = TileType.Floor
+                    self.map[y_id][start[0]] = TileType.Floor
         
         def add_corridors_to_map():
             for room, room2 in self.pairwise(self.rooms):
                 start, finish = room.get_random_tile(), room2.get_random_tile()
                 make_corridor(start, finish, is_vertical=bool(random.getrandbits(1)))     
         
-        map = [[TileType.Wall for _ in range(self.tile_width)] for _ in range(self.tile_height)]
+        self.map = [[TileType.Wall for _ in range(self.tile_width)] for _ in range(self.tile_height)]
         NUM_OF_ROOMS = 10
         for i in range(NUM_OF_ROOMS):
             min_splits, max_splits = (3, 5) if i<2 else (5, 6) if i<7 else (4, 8)
@@ -163,7 +164,7 @@ class Map:
         add_corridors_to_map()
         if debug:
             print('map:')
-            for row in map:
+            for row in self.map:
                 print([int(i) for i in row])
         create_walls()
 
@@ -176,6 +177,8 @@ class Map:
         # carved out
         pass
 
+    def getMapArray(self) -> list[list[TileType]]:
+        return self.map
 
 class Viewport:
     def __init__(self, tile_width: int, tile_height: int):

@@ -3,6 +3,7 @@ from typing import Any, Iterable
 import pygame as pg
 from enum import Enum
 
+from Pathfinding import Pathfinder
 from settings import GREEN, MOB_SPRITE_SHEET, MOB_SPRITE_SHEET_SPRITE_SIZE, PLAYER_SPRITE_SHEET, PLAYER_SPRITE_SHEET_SPRITE_SIZE, TILESIZE
 
 class Direction(Enum):
@@ -49,9 +50,16 @@ class gameObject(pg.sprite.Sprite):
         self.id = gameObject.number_of_obejects
         gameObject.number_of_obejects+=1
     
-    def place(self, new_x, new_y):
+    def place(self, new_x: int, new_y: int):
         self.x_pos = new_x
         self.y_pos = new_y
+
+    def place(self, new_pos: tuple[int, int]):
+        self.x_pos = new_pos[0]
+        self.y_pos = new_pos[1]
+
+    def get_position(self)->tuple[int, int]:
+        return self.x_pos, self.y_pos
 
 
 class Player(gameObject):
@@ -120,14 +128,23 @@ class Mob(gameObject):
         self.rect.x = self.x_pos * TILESIZE
         self.rect.y = self.y_pos * TILESIZE
         self.game = game
+        self.pathfinder = Pathfinder(game.map)
+        self.path = []
+        self.path_iterator = iter(self.path)
     
     def act(self):
-        print(f'Mob {self.id} acts:')
+        # if player_changed_position():
+        self.path = self.pathfinder.find_path(self.get_position(), self.game.player.get_position())[1:-1]
+        self.path_iterator = iter(self.path)
+        print(f'Mob {self.id} acts: {self.path}')
         # randomly moves left or right for now
-        self.move(dx=1*random.choice([1, -1]))
+        try:
+            self.place(next(self.path_iterator))
+        except StopIteration:
+            pass
 
     def move(self, dx=0, dy=0):
-        print('\tMob movement')
+        # print('\tMob movement')
         self.x_pos += dx
         self.y_pos += dy
 

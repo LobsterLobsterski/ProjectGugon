@@ -1,8 +1,9 @@
 import pygame as pg
 import sys
 
+from Pathfinding import Pathfinder
 from map import Map, Viewport
-from settings import BGCOLOR, BLACK, FPS, HEIGHT, LIGHTGREY, TILESIZE, TITLE, WHITE, WIDTH
+from settings import BGCOLOR, BLACK, FPS, HEIGHT, LIGHTGREY, TILESIZE, TITLE, WHITE, WIDTH, YELLOW
 from sprites import Mob, Player
 
 class Game:
@@ -14,6 +15,8 @@ class Game:
         pg.key.set_repeat(100, 100)
         self.player_turn = True
 
+        self.mobs = []
+
     def new(self):
         self.all_sprites = pg.sprite.Group()
         self.background_layer = pg.sprite.Group()
@@ -23,13 +26,13 @@ class Game:
 
         self.map = Map((self.all_sprites, self.background_layer), 
                        (64, 48))
-
+        
         player_pos_x, player_pos_y = self.map.get_initial_player_pos()
         self.player = Player((self.all_sprites, self.player_layer), 
                              (self.background_layer, self.mob_layer), 
                              player_pos_x, player_pos_y)
-        mob_positions = [(player_pos_x+2, player_pos_y+2)]#self.map.get_mob_positions(1)
-        mobs = [Mob(self, (self.all_sprites, self.mob_layer), x, y) for x, y in mob_positions]
+        mob_positions = self.map.get_mob_positions(2)
+        self.mobs = [Mob(self, (self.all_sprites, self.mob_layer), x, y) for x, y in mob_positions]
 
         self.viewport = Viewport(self.map.tile_width, self.map.tile_height)
   
@@ -57,11 +60,25 @@ class Game:
         pg.display.set_caption("{:.2f}".format(self.clock.get_fps()))
         self.screen.fill(BGCOLOR)
         self.draw_grid()
+
+        self.draw_mob_paths()
+
         self.draw_background_sprites()
         self.draw_interactable_sprites()
         self.draw_action_sprites()
         self.draw_turn_depictor()
         pg.display.flip()
+
+    def draw_mob_paths(self):
+        for mob in self.mobs:
+            for x, y in mob.path:
+                rect = pg.Rect(x, y, TILESIZE//4, TILESIZE//4)
+                image = pg.Surface((TILESIZE//4, TILESIZE//4))
+                image.fill(YELLOW)
+                rec = image.get_rect(center=rect.center)
+                rec.x = rec.x*TILESIZE + 3*TILESIZE//8
+                rec.y = rec.y*TILESIZE + 3*TILESIZE//8
+                self.screen.blit(image, self.viewport.apply_offset(rec))
 
     def draw_turn_depictor(self):
         rect = pg.Rect(0, 0, 50, 50)
@@ -99,6 +116,9 @@ class Game:
             if event.type == pg.KEYDOWN:
                 if event.key == pg.K_ESCAPE:
                     self.quit()
+
+                if event.key == pg.K_SPACE:
+                    self.player_turn = False
                 
                 #when player does an action, switch the turn
                 if event.key in [pg.K_LEFT, pg.K_RIGHT, pg.K_UP, pg.K_DOWN] and self.player_turn:
