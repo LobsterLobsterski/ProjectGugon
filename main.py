@@ -1,7 +1,6 @@
 import pygame as pg
 import sys
 
-from Pathfinding import Pathfinder
 from map import Map, Viewport
 from settings import BGCOLOR, BLACK, FPS, HEIGHT, LIGHTGREY, TILESIZE, TITLE, WHITE, WIDTH, YELLOW
 from sprites import Mob, Player

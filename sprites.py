@@ -3,9 +3,10 @@ from typing import Any, Iterable
 import pygame as pg
 from enum import Enum
 
-from AI.BehaviourTree import BahaviourTree
+from AI.BehaviourTree import BehaviourTree
 from Pathfinding import Pathfinder
 from settings import GREEN, MOB_SPRITE_SHEET, MOB_SPRITE_SHEET_SPRITE_SIZE, PLAYER_SPRITE_SHEET, PLAYER_SPRITE_SHEET_SPRITE_SIZE, TILESIZE
+from utils import get_squared_distance
 
 class Direction(Enum):
     UP = 1
@@ -130,22 +131,15 @@ class Mob(gameObject):
         self.rect.y = self.y_pos * TILESIZE
         self.game = game
         self.pathfinder = Pathfinder(game.map)
+        self.attack_range = 1
         ### separate class?
         self.path = []
         self.path_iterator = iter(self.path)
         ###
         self.last_known_player_pos = self.game.player.get_position()
 
-        self.bahaviour_tree = BahaviourTree(self)
+        self.bahaviour_tree = self.init_behaviour()
     
-    def player_has_moved(self):
-        return self.last_known_player_pos != self.game.player.get_position()
-    
-    def update_path(self):
-        if self.player_has_moved():
-            self.last_known_player_pos = self.game.player.get_position()
-            self.path = self.pathfinder.find_path(self.get_position(), self.last_known_player_pos)[1:-1]
-            self.path_iterator = iter(self.path)
 
     def act(self):
         print(f'Mob {self.id} acts:')
@@ -153,20 +147,11 @@ class Mob(gameObject):
         action = self.bahaviour_tree.find_action()
         action()
         
-        self.update_path()
-        self.follow_path()
+        self.pursue_player()
         
-
-    def move(self, dx=0, dy=0):
-        # print('\tMob movement')
-        self.x_pos += dx
-        self.y_pos += dy
-
-    def check_collisions(self, new_pos: tuple[int, int]):
-        #temp
-        return False
-
-    def follow_path(self):
+    ###actions
+    def pursue_player(self):
+        self.update_path()
         print('\tmoves towards player')
         try:
             new_pos = next(self.path_iterator)
@@ -176,6 +161,49 @@ class Mob(gameObject):
             return
         
         self.place(new_pos)
+
+    def attack(self):
+        print('\tAttacking! ... Not implemented yet...')
+
+    def roam(self):
+        # implement when plyer detection is implemented
+        print('\tRoaming! ... Not implemented yet...')
+    ###
+
+    ### conditions
+    def detect_player(self) -> bool:
+        #temp, for now mobs have global awareness
+        #of player
+        return True
+    
+    def in_attack_range(self) -> bool:
+        return get_squared_distance(self.get_position(), self.last_known_player_pos) <= self.attack_range
+    ###
+    
+    def init_behaviour(self) -> BehaviourTree:
+        tree = {
+            self.detect_player: [self.roam, self.in_attack_range], 
+            self.in_attack_range: [self.pursue_player, self.attack]
+        }
+        return BehaviourTree(self, tree)
+    
+    def update_path(self):
+        if self.player_has_moved():
+            self.last_known_player_pos = self.game.player.get_position()
+            self.path = self.pathfinder.find_path(self.get_position(), self.last_known_player_pos)[1:-1]
+            self.path_iterator = iter(self.path)
+    
+    def player_has_moved(self):
+        return self.last_known_player_pos != self.game.player.get_position()
+    
+    def move(self, dx=0, dy=0):
+        # print('\tMob movement')
+        self.x_pos += dx
+        self.y_pos += dy
+
+    def check_collisions(self, new_pos: tuple[int, int]):
+        #temp
+        return False
 
     def update(self):
         self.rect.x = self.x_pos * TILESIZE
