@@ -5,9 +5,9 @@ from map import Map, Viewport
 from settings import BGCOLOR, BLACK, FPS, HEIGHT, LIGHTGREY, TILESIZE, TITLE, WHITE, WIDTH, YELLOW
 from sprites import Mob, Player
 
-class Game:
+class Game:              
     def __init__(self):
-        pg.init()
+        pg.init()     
         self.screen = pg.display.set_mode((WIDTH, HEIGHT))
         pg.display.set_caption(TITLE)
         self.clock = pg.time.Clock()
@@ -120,7 +120,7 @@ class Game:
                     self.player_turn = False
                 
                 #when player does an action, switch the turn
-                if event.key in [pg.K_LEFT, pg.K_RIGHT, pg.K_UP, pg.K_DOWN] and self.player_turn:
+                if event.key in [pg.K_LEFT, pg.K_RIGHT, pg.K_UP, pg.K_DOWN] and self.player_turn and self.player.alive:
                     self.player_turn = False
                     self.player.move(event.key)
                 

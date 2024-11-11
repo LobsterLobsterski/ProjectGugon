@@ -58,6 +58,11 @@ class Map:
         # self.random(300)
         self.binary_space_partition()
         
+    def check_if_pos_is_floor(self, pos: tuple[int, int]) -> bool:
+        # print('floor type:', self.map[pos[0]][pos[1]], self.map[pos[0]][pos[1]] == TileType.Floor)
+        return self.map[pos[0]][pos[1]] == TileType.Floor
+
+    
     def _get_random_floor(self) -> tuple[int, int]:
             room = random.choice(self.rooms)
             return random.randint(room.x, room.x+room.width), random.randint(room.y, room.y+room.height)
