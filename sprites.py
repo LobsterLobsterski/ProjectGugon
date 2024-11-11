@@ -1,13 +1,18 @@
 import random
 import sys
-from typing import Any, Iterable
+from typing import Any, Callable, Dict, Iterable
 import pygame as pg
 from enum import Enum
 
 from AI.BehaviourTree import BehaviourTree
 from Pathfinding import Pathfinder
-from settings import GREEN, GRIDHEIGHT, GRIDWIDTH, MOB_SPRITE_SHEET, MOB_SPRITE_SHEET_SPRITE_SIZE, PLAYER_SPRITE_SHEET, PLAYER_SPRITE_SHEET_SPRITE_SIZE, TILESIZE
+from settings import GREEN, GRIDHEIGHT, GRIDWIDTH, TILESIZE
 from utils import get_squared_distance
+
+class MobType(Enum):
+    Player = 0
+    Goblin = 1
+    Skeleton = 2
 
 class Direction(Enum):
     UP = 1
@@ -16,30 +21,44 @@ class Direction(Enum):
     RIGHT = 4
 
 class Spritesheet:
-    def __init__(self, filename, pixel_size):
+    def __init__(self, mob_type: MobType):
+        filename, pixel_size = self.get_spritesheet_data(mob_type)
         try:
             self.sheet = pg.image.load(filename).convert_alpha()
             self.pixel_size = pixel_size
         except pg.error as e:
             raise FileNotFoundError(e)
         
+    def get_spritesheet_data(self, mob_type: MobType) -> tuple[str, int]:
+        if mob_type == MobType.Player:
+            return 'assets/Player/Warrior_Red.png', 192
+        elif mob_type == MobType.Goblin:
+            return 'assets/Mob/Torch_Yellow.png', 192
+        elif mob_type == MobType.Skeleton:
+            return 'assets/Mob/Skeleton.png', 16
+        else:
+            raise ValueError(f'Mob {mob_type} has no spritesheet defined!')
+        
     def image_at(self, sprite_coordinate: tuple, x_offset=10) -> pg.Surface:
         x, y = sprite_coordinate
         crop=30
-        rect = pg.Rect(x*self.pixel_size+crop+x_offset, y*self.pixel_size+crop, self.pixel_size-crop-x_offset, self.pixel_size-crop)
+        if self.pixel_size == 192:
+            rect = pg.Rect(x*self.pixel_size+crop+x_offset, y*self.pixel_size+crop, self.pixel_size-crop-x_offset, self.pixel_size-crop)
+        else:
+            rect = pg.Rect(x*self.pixel_size, y*self.pixel_size, self.pixel_size, self.pixel_size)
+            print(rect)
         try:
             image = self.sheet.subsurface(rect)
         except ValueError as e:
-            raise ValueError('Exceeded spritesheet dimensions!', e)
+            raise ValueError(f'Exceeded spritesheet dimensions!: {e}')
         
-        image = pg.transform.scale(image, (TILESIZE*((TILESIZE+crop)/TILESIZE), TILESIZE*((TILESIZE+crop)/TILESIZE)))
+        if self.pixel_size == 192:
+            image = pg.transform.scale(image, (TILESIZE*((TILESIZE+crop)/TILESIZE), TILESIZE*((TILESIZE+crop)/TILESIZE)))
+        else:
+            image = pg.transform.scale(image, (TILESIZE, TILESIZE) )
 
         return image
     
-
-    # def images_at(self, rects):
-    #     "Loads multiple images, supply a list of coordinates" 
-    #     return [self.image_at(rect) for rect in rects]
 
 class GameObject(pg.sprite.Sprite):
     number_of_obejects=0
@@ -63,6 +82,7 @@ class GameObject(pg.sprite.Sprite):
     def get_position(self)->tuple[int, int]:
         return self.x_pos, self.y_pos
 
+
 class Creature(GameObject):
     def __init__(self, groups: Iterable, image: pg.Surface, x: int, y: int, health: int, range: int, damage: int):
         super().__init__(groups, image, x, y)
@@ -80,7 +100,7 @@ class Creature(GameObject):
 
 class Player(Creature):
     def __init__(self, groups: Iterable, collision_layers: tuple, init_x_pos: int, init_y_pos: int):
-        self.spritesheet = Spritesheet(PLAYER_SPRITE_SHEET, PLAYER_SPRITE_SHEET_SPRITE_SIZE)
+        self.spritesheet = Spritesheet(MobType.Player)
 
         super().__init__(groups, 
                             self.spritesheet.image_at((0, 0)),
@@ -139,11 +159,12 @@ class Player(Creature):
         
 
 class Mob(Creature):
-    def __init__(self, game, groups: Iterable, init_x_pos: int, init_y_pos: int):
-        self.spritesheet = Spritesheet(MOB_SPRITE_SHEET, MOB_SPRITE_SHEET_SPRITE_SIZE)
+    def __init__(self, game, groups: Iterable, init_x_pos: int, init_y_pos: int, health:int, attack_range:int, damage:int, mob_type: MobType):
+        self.spritesheet = Spritesheet(mob_type)
+        
         super().__init__(groups, self.spritesheet.image_at((0, 0)), 
                          init_x_pos, init_y_pos,
-                         15, 1, 100)
+                         health, attack_range, damage)
         
         self.rect.x = self.x_pos * TILESIZE
         self.rect.y = self.y_pos * TILESIZE
@@ -154,13 +175,10 @@ class Mob(Creature):
         self.path_iterator = iter(self.path)
         ###
         self.last_known_player_pos = self.game.player.get_position()
-
-        self.bahaviour_tree = self.init_behaviour()
     
-
     def act(self):
         if self.alive:
-            print(f'\nMob {self.id} acts:')
+            print(f'\n{type(self).__name__} {self.id} acts:')
 
             action = self.bahaviour_tree.find_action()
             print('action found:', action)
@@ -168,7 +186,7 @@ class Mob(Creature):
             # sys.exit()
             # self.follow_path()
         
-    ###actions
+    ###basic behaviour actions
     def follow_path(self):
         print('\tfollows path')
         try:
@@ -196,7 +214,7 @@ class Mob(Creature):
         self.follow_path()
     ###
 
-    ### conditions
+    ###basic behaviour conditions
     def detect_player(self) -> bool:
         #temp, for now mobs have global awareness
         #of player as long as they're alive
@@ -222,15 +240,9 @@ class Mob(Creature):
 
         return self.get_random_valid_roam_goal(distance)
     
-
-    def init_behaviour(self) -> BehaviourTree:
-        tree = {
-            self.detect_player: [self.roam, self.in_attack_range], 
-            self.in_attack_range: [self.follow_path, self.attack]
-        }
-        return BehaviourTree(self, tree)
+    def init_behaviour(self, behaviour_tree: Dict[Callable, Callable]) -> BehaviourTree:
+        return BehaviourTree(self, behaviour_tree)
     
-
     def update_last_known_player_pos(self):
         self.last_known_player_pos = self.game.player.get_position()
 
@@ -259,6 +271,35 @@ class Mob(Creature):
         self.rect.x = self.x_pos * TILESIZE
         self.rect.y = self.y_pos * TILESIZE
 
+class Goblin(Mob):
+    def __init__(self, game, groups: Iterable, init_x_pos: int, init_y_pos: int, health:int, attack_range:int, damage:int):
+        super().__init__(game, groups, init_x_pos, init_y_pos, health, attack_range, damage, MobType.Goblin)
+
+        behaviour_tree = {
+            self.detect_player: [self.roam, self.in_attack_range], 
+            self.in_attack_range: [self.follow_path, self.attack]
+        }
+        self.bahaviour_tree = super().init_behaviour(behaviour_tree)
+    
+    ### complex/specific  behaviour actions
+    ###
+    ### complex/specific conditions
+    ###
+
+class Skeleton(Mob):
+    def __init__(self, game, groups: Iterable, init_x_pos: int, init_y_pos: int, health:int, attack_range:int, damage:int):
+        super().__init__(game, groups, init_x_pos, init_y_pos, health, attack_range, damage, MobType.Skeleton)
+
+        behaviour_tree = {
+            self.detect_player: [self.roam, self.in_attack_range], 
+            self.in_attack_range: [self.follow_path, self.attack]
+        }
+        self.bahaviour_tree = self.init_behaviour(behaviour_tree)
+    
+    ### complex/specific  behaviour actions
+    ###
+    ### complex/specific conditions
+    ###
 
 class Wall(GameObject):
     def __init__(self, sprite_groups: Iterable, x_pos: int, y_pos: int):

@@ -3,9 +3,9 @@ import sys
 
 from map import Map, Viewport
 from settings import BGCOLOR, BLACK, FPS, HEIGHT, LIGHTGREY, TILESIZE, TITLE, WHITE, WIDTH, YELLOW
-from sprites import Mob, Player
+from sprites import Goblin, Player, Skeleton
 
-class Game:              
+class Game:                         
     def __init__(self):
         pg.init()     
         self.screen = pg.display.set_mode((WIDTH, HEIGHT))
@@ -31,7 +31,7 @@ class Game:
                              (self.background_layer, self.mob_layer), 
                              player_pos_x, player_pos_y)
         mob_positions = self.map.get_mob_positions(1)
-        self.mobs = [Mob(self, (self.all_sprites, self.mob_layer), x, y) for x, y in mob_positions]
+        self.mobs = [Skeleton(self, (self.all_sprites, self.mob_layer), x, y, 30, 1, 100) for x, y in mob_positions]
 
         self.viewport = Viewport(self.map.tile_width, self.map.tile_height)
   
