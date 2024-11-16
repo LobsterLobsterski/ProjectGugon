@@ -92,10 +92,20 @@ class Creature(GameObject):
         self.alive = True
 
     def receive_damage(self, damage: int):
+        print(self.id, 'received', damage, 'damage!')
         self.health -= damage
         if self.health <= 0:
             print(self.id, 'died!')
-            self.alive = False
+            self.die()
+    
+    def die(self):
+        self.alive = False
+        # this removes the sprite from sprite
+        # groups and thus stops it from being
+        # drawn
+        self.kill()
+        # self.spawn_corpse()
+
         
 
 class Player(Creature):
@@ -111,6 +121,11 @@ class Player(Creature):
         self.collision_layers = collision_layers
         self.direction = Direction.RIGHT
 
+    def simple_attack(self, target: Creature):
+        if isinstance(target, Creature):
+            print(f'Player attacked {target}')
+            target.receive_damage(self.damage)
+    
     def move(self, key: pg.event):
         dx, dy = 0, 0
         if key == pg.K_LEFT:
@@ -123,9 +138,13 @@ class Player(Creature):
             dy=1
 
         self.change_direction(dx, dy)
-        if not self.collision(dx, dy):
+        collision_object = self.collision(dx, dy)
+
+        if collision_object is None:
             self.x_pos += dx
             self.y_pos += dy
+        else:
+            self.simple_attack(collision_object)
     
     def change_direction(self, dx, dy):
         if dx > 0:
@@ -137,13 +156,13 @@ class Player(Creature):
         elif dy < 0:
             self.direction = Direction.UP
         
-    def collision(self, dx=0, dy=0):
+    def collision(self, dx=0, dy=0) -> GameObject:
         for layer in self.collision_layers:
             for object in layer:
                 if object.x_pos == self.x_pos+dx and object.y_pos == self.y_pos+dy:
-                    return True
+                    return object
 
-        return False
+        return None
 
     def update(self):
         self.rect.x = self.x_pos * TILESIZE
@@ -271,6 +290,7 @@ class Mob(Creature):
         self.rect.x = self.x_pos * TILESIZE
         self.rect.y = self.y_pos * TILESIZE
 
+
 class Goblin(Mob):
     def __init__(self, game, groups: Iterable, init_x_pos: int, init_y_pos: int, health:int, attack_range:int, damage:int):
         super().__init__(game, groups, init_x_pos, init_y_pos, health, attack_range, damage, MobType.Goblin)
@@ -285,6 +305,7 @@ class Goblin(Mob):
     ###
     ### complex/specific conditions
     ###
+
 
 class Skeleton(Mob):
     def __init__(self, game, groups: Iterable, init_x_pos: int, init_y_pos: int, health:int, attack_range:int, damage:int):
