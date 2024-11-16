@@ -2,6 +2,7 @@ import pygame as pg
 import sys
 
 from map import Map, Viewport
+from proceduralGeneration import ProceduralGenerationType
 from settings import BGCOLOR, BLACK, FPS, HEIGHT, LIGHTGREY, TILESIZE, TITLE, WHITE, WIDTH, YELLOW
 from sprites import Goblin, Player, Skeleton
 
@@ -24,14 +25,14 @@ class Game:
         self.mob_layer = pg.sprite.Group()
 
         self.map = Map((self.all_sprites, self.background_layer), 
-                       (64, 48))
+                       (64, 48), map_generator_type=ProceduralGenerationType.BSP)
         
         player_pos_x, player_pos_y = self.map.get_initial_player_pos()
         self.player = Player((self.all_sprites, self.player_layer), 
                              (self.background_layer, self.mob_layer), 
                              player_pos_x, player_pos_y)
         mob_positions = self.map.get_mob_positions(1)
-        self.mobs = [Skeleton(self, (self.all_sprites, self.mob_layer), x, y, 30, 1, 100) for x, y in mob_positions]
+        self.mobs = [Skeleton(self, (self.all_sprites, self.mob_layer), x, y, 30, 1, 10) for x, y in mob_positions]
 
         self.viewport = Viewport(self.map.tile_width, self.map.tile_height)
   
@@ -49,6 +50,7 @@ class Game:
 
     def update(self):
         self.all_sprites.update()
+        # put this in mob.update() ?
         if not self.player_turn:
             for mob in self.mob_layer:
                 mob.act()
