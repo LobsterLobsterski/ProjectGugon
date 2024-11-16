@@ -26,8 +26,10 @@ class Map:
         return self.map[pos[0]][pos[1]] == TileType.Floor
    
     def _get_random_floor(self) -> tuple[int, int]:
-            room = random.choice(self.rooms)
-            return random.randint(room.x, room.x+room.width), random.randint(room.y, room.y+room.height)
+            y = random.randint(0, self.tile_height-1)
+            row = self.map[y]
+
+            return random.choice([(x, y) for x, tile in enumerate(row) if tile == TileType.Floor])
 
     def get_initial_player_pos(self) -> tuple[int, int]:
         return self._get_random_floor()

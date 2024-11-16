@@ -25,7 +25,7 @@ class Game:
         self.mob_layer = pg.sprite.Group()
 
         self.map = Map((self.all_sprites, self.background_layer), 
-                       (64, 48), map_generator_type=ProceduralGenerationType.BSP)
+                       (64, 48), map_generator_type=ProceduralGenerationType.CA)
         
         player_pos_x, player_pos_y = self.map.get_initial_player_pos()
         self.player = Player((self.all_sprites, self.player_layer), 
