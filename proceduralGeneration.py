@@ -219,7 +219,7 @@ def _create_walls(map: list[list[TileType]], sprite_groups: Iterable[Group]):
 def _encase_map(map: list[list[TileType]], tile_width: int, tile_height: int):
     for x in range(tile_width):
         for y in range(tile_height):
-            if x in (0, tile_width-2) or y in (0, tile_height-2):
+            if x in (0, tile_width-1) or y in (0, tile_height-1):
                 map[y][x] = TileType.Wall
 
 if __name__ == '__main__':

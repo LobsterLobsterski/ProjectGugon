@@ -58,17 +58,13 @@ class BehaviourTree:
             current_node = self.root
 
         if isinstance(current_node, ControlFlowNode):
-            # print('ControlFlowNode:', current_node)
             condition_result = current_node.activate()
-            print(current_node, '->', condition_result)
             if condition_result:
                 return self.find_action(current_node.get_child_by_index(1))
             return self.find_action(current_node.get_child_by_index(0))
         
         return current_node.executionBehaviour
     
-        return lambda: print('Finding actions not implemented yet!')
-
     def construct_tree(self, tree):
         # print('\nCONSTRUCTING BEHAVIOUR TREE!!!')
         def get_children_nodes(children: List[Callable, ], recursionLevel=0) -> List[BehaviourNode]:

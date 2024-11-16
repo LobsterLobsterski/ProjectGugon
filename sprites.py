@@ -195,15 +195,15 @@ class Mob(Creature):
         ###
         self.last_known_player_pos = self.game.player.get_position()
     
+    def fight(self):
+        raise NotImplementedError('Enemy cannot fight yet!')
+    
     def act(self):
         if self.alive:
             print(f'\n{type(self).__name__} {self.id} acts:')
 
             action = self.bahaviour_tree.find_action()
-            print('action found:', action)
             action()
-            # sys.exit()
-            # self.follow_path()
         
     ###basic behaviour actions
     def follow_path(self):
@@ -240,7 +240,6 @@ class Mob(Creature):
         return self.game.player.alive
     
     def in_attack_range(self) -> bool:
-        print('own pos: ', self.get_position(), 'lkpp:', self.last_known_player_pos)
         ### needs to be here otherwise the mob doesn't refind path after attacking
         self.update_path(self.last_known_player_pos)
         return get_squared_distance(self.get_position(), self.last_known_player_pos) <= self.attack_range
@@ -316,11 +315,6 @@ class Skeleton(Mob):
             self.in_attack_range: [self.follow_path, self.attack]
         }
         self.bahaviour_tree = self.init_behaviour(behaviour_tree)
-    
-    ### complex/specific  behaviour actions
-    ###
-    ### complex/specific conditions
-    ###
 
 class Wall(GameObject):
     def __init__(self, sprite_groups: Iterable, x_pos: int, y_pos: int):
