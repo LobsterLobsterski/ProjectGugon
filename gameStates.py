@@ -4,7 +4,7 @@ import pygame as pg
 
 from map import Map, Viewport
 from proceduralGeneration import ProceduralGenerationType
-from settings import BGCOLOR, BLACK, FPS, HEIGHT, LIGHTGREY, TILESIZE, WHITE, WIDTH, YELLOW
+from settings import BGCOLOR, BLACK, FPS, GRAY, HEIGHT, LIGHTGREY, TILESIZE, WHITE, WIDTH, YELLOW
 from sprites import Player, Skeleton
 
 class State:
@@ -141,9 +141,33 @@ class WorldMapState(State):
 class CombatState(State):
     def __init__(self, game, clock, screen):
         super().__init__(game, clock, screen)
+        self.font = pg.font.Font(None, 36)
         self.player_turn = True
-        self.enemies = []
+
+        self.enemies = [
+            pg.Rect(0, 100, 150, 50),
+            pg.Rect(0, 100, 150, 50),
+            pg.Rect(0, 100, 150, 50)
+        ]
+        self.centre_enemies()
+
+        self.player = pg.Rect(50, 400, 100, 50)  # Player box
+        self.actions = [
+            {"name": "Attack", "rect": pg.Rect(50, HEIGHT-250, 150, 40), "hovered": False},
+            {"name": "Defend", "rect": pg.Rect(50, HEIGHT-200, 150, 40), "hovered": False},
+            {"name": "Skill", "rect": pg.Rect(50, HEIGHT-150, 150, 40), "hovered": False},
+            {"name": "Escape", "rect": pg.Rect(50, HEIGHT-100, 150, 40), "hovered": False}
+        ]
+        self.target_selection_box = pg.Rect(250, HEIGHT-260, WIDTH-250-50, 200)
+
         self.new()
+
+    def centre_enemies(self):
+        screen_width_per_enemy = WIDTH//len(self.enemies)
+        start_pos = 0
+        for enemy_rect in self.enemies:
+            enemy_rect.left = (start_pos+screen_width_per_enemy)//2
+            start_pos += screen_width_per_enemy+enemy_rect.width
     
     def new(self):
         pass
@@ -156,9 +180,19 @@ class CombatState(State):
             self.draw()
     
     def events(self):
+        mouse_pos = pg.mouse.get_pos()
+
+        for action in self.actions:
+            action["hovered"] = action["rect"].collidepoint(mouse_pos)
+
         for event in pg.event.get():
             if event.type == pg.QUIT:
                 self.quit()
+
+            if event.type == pg.MOUSEBUTTONDOWN:
+                for action in self.actions:
+                    if action["rect"].collidepoint(event.pos):
+                        print(f"{action['name']} clicked!")
 
             if event.type == pg.KEYDOWN:
                 if event.key == pg.K_ESCAPE:
@@ -205,8 +239,25 @@ class CombatState(State):
         pass
 
     def draw_ui(self):
-        pass
-    
+        for idx, monster in enumerate(self.enemies):
+            pg.draw.rect(self.screen, GRAY, monster)
+            text = self.font.render(f"Monster {idx + 1}", True, BLACK)
+            self.screen.blit(text, (monster.x + 10, monster.y + 10))
+        
+        pg.draw.rect(self.screen, GRAY, self.player)
+        player_text = self.font.render("Player", True, BLACK)
+        self.screen.blit(player_text, (self.player.x + 10, self.player.y + 10))
+
+        for action in self.actions:
+            color = (180, 180, 250) if action["hovered"] else GRAY
+            pg.draw.rect(self.screen, color, action["rect"])
+            text = self.font.render(action["name"], True, BLACK)
+            self.screen.blit(text, (action["rect"].x + 10, action["rect"].y + 5))
+        
+        pg.draw.rect(self.screen, GRAY, self.target_selection_box, 2)
+        target_text = self.font.render("Targets", True, BLACK)
+        self.screen.blit(target_text, (self.target_selection_box.x + 10, self.target_selection_box.y - 30))
+        
     def update(self):
         if not self.player_turn:
             for enemy in self.enemies:
