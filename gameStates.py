@@ -1,11 +1,12 @@
 from enum import Enum
+import random
 import sys
 import pygame as pg
 
 from map import Map, Viewport
 from proceduralGeneration import ProceduralGenerationType
 from settings import BGCOLOR, BLACK, FPS, GRAY, HEIGHT, LIGHTGREY, TILESIZE, WHITE, WIDTH, YELLOW
-from sprites import Player, Skeleton
+from sprites import MobType, Player, Skeleton
 
 class State:
     def __init__(self, game, clock, screen):
@@ -139,18 +140,15 @@ class WorldMapState(State):
 
        
 class CombatState(State):
-    def __init__(self, game, clock, screen):
+    def __init__(self, game, clock, screen, monsterType: MobType):
         super().__init__(game, clock, screen)
         self.font = pg.font.Font(None, 36)
         self.player_turn = True
 
+        self.enemies = []
+        self.generate_encounter(monsterType)
+
         self.selected_action = None
-        self.enemies = [
-             {"name": "Monster 1", "rect": pg.Rect(0, 100, 150, 50), "hovered": False},
-             {"name": "Monster 2", "rect": pg.Rect(0, 100, 150, 50), "hovered": False},
-             {"name": "Monster 3", "rect": pg.Rect(0, 100, 150, 50), "hovered": False}
-        ]
-        self.centre_enemies()
 
         self.player = pg.Rect(50, 400, 100, 50)  # Player box
         self.actions = [
@@ -163,13 +161,16 @@ class CombatState(State):
 
         self.new()
 
-    def centre_enemies(self):
-        screen_width_per_enemy = WIDTH//len(self.enemies)
-        start_pos = 0
-        for enemy in self.enemies:
-            enemy['rect'].left = (start_pos+screen_width_per_enemy)//2
-            start_pos += screen_width_per_enemy+enemy['rect'].width
-    
+    def generate_encounter(self, monsterType: MobType):
+        num_of_enemies = random.randint(1, 4)
+        screen_width_per_enemy = WIDTH//num_of_enemies
+        enemy_width = 150
+        for idx in range(num_of_enemies):
+            enemy_midpoint = (2*screen_width_per_enemy*idx + screen_width_per_enemy)//2
+            enemy_leftmost_pos = enemy_midpoint-enemy_width//2
+            enemy = {"name": f"Monster {idx+1}", "rect": pg.Rect(enemy_leftmost_pos, 100, enemy_width, 50), "hovered": False}
+            self.enemies.append(enemy)
+        
     def new(self):
         pass
 

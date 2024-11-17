@@ -2,16 +2,17 @@ import pygame as pg
 
 from gameStates import GameState
 from settings import HEIGHT, TITLE, WIDTH
+from sprites import MobType
 
 
-class Game:                   
+class Game:
     def __init__(self):
         pg.init()
         self.screen = pg.display.set_mode((WIDTH, HEIGHT))
         pg.display.set_caption(TITLE)
         self.clock = pg.time.Clock()
         pg.key.set_repeat(100, 100)
-        self.map_state = GameState.Map.value(self, self.clock, self.screen)
+        self.map_state = GameState.Combat.value(self, self.clock, self.screen, MobType.Skeleton)
         self.current_state = self.map_state
 
     def run(self):
