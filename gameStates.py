@@ -146,9 +146,9 @@ class CombatState(State):
 
         self.selected_action = None
         self.enemies = [
-             {"name": "Monster 1", "rect": pg.Rect(0, 100, 150, 50)},
-             {"name": "Monster 2", "rect": pg.Rect(0, 100, 150, 50)},
-             {"name": "Monster 3", "rect": pg.Rect(0, 100, 150, 50)}
+             {"name": "Monster 1", "rect": pg.Rect(0, 100, 150, 50), "hovered": False},
+             {"name": "Monster 2", "rect": pg.Rect(0, 100, 150, 50), "hovered": False},
+             {"name": "Monster 3", "rect": pg.Rect(0, 100, 150, 50), "hovered": False}
         ]
         self.centre_enemies()
 
@@ -180,41 +180,33 @@ class CombatState(State):
             self.update()
             self.draw()
     
+    ### events
     def events(self):
         mouse_pos = pg.mouse.get_pos()
 
-        for action in self.actions:
-            action["hovered"] = action["rect"].collidepoint(mouse_pos)
-
+        self.update_action_hover(mouse_pos)
+        if self.selected_action == 'Attack':
+            self.update_target_hover(mouse_pos)
+            
         for event in pg.event.get():
             if event.type == pg.QUIT:
                 self.quit()
 
             if event.type == pg.MOUSEBUTTONDOWN:
-                for action in self.actions:
-                    if action["rect"].collidepoint(event.pos):
-                        print(f"{action['name']} selected!")
-                        self.selected_action = action["name"]
+                self.update_selected_action(event.pos)
                 
                 if self.selected_action == "Attack":
-                    for idx, target in enumerate(self.enemies):
-                        target_name_rect = pg.Rect(
-                            self.target_selection_box.x + 10,
-                            self.target_selection_box.y + 10 + idx * 40,
-                            self.target_selection_box.width - 20,
-                            30
-                        )
-                        if target["rect"].collidepoint(mouse_pos) or target_name_rect.collidepoint(mouse_pos):
-                            selected_target = target["name"]
-                            print(f"Target {selected_target} selected!")
-                        
+                    self.execute_attack(mouse_pos)
 
-                if self.selected_action == "Defend":
-                    print('Defending')
-                if self.selected_action == "Skill":
-                    print('Skilling')
-                if self.selected_action == "Escape":
-                    print('Escapeing')
+                elif self.selected_action == "Defend":
+                    self.execute_defend()     
+
+                elif self.selected_action == "Skill":
+                    self.execute_skill()
+
+                elif self.selected_action == "Escape":
+                    self.execute_escape()
+
 
             if event.type == pg.KEYDOWN:
                 if event.key == pg.K_ESCAPE:
@@ -223,31 +215,63 @@ class CombatState(State):
                 if event.key == pg.K_c:
                     self.game.change_state(GameState.Map)
                     self.game.run()
-
-                if event.key == pg.K_SPACE:
-                    print('select button')
-                    self.player_turn = False
-                
-                if event.key == pg.K_LEFT:
-                    print('left')
-
-                if event.key == pg.K_RIGHT:
-                    print('right')
-
-                if event.key == pg.K_UP:
-                    print('up')
-
-                if event.key == pg.K_DOWN:
-                    print('down')
                              
+    
+    def update_action_hover(self, mouse_pos):
+        for action in self.actions:
+            action["hovered"] = action["rect"].collidepoint(mouse_pos)
+    
+    def update_target_hover(self, mouse_pos):
+        for target in self.enemies:
+            target_name_rect = pg.Rect(
+                self.target_selection_box.x + 10,
+                self.target_selection_box.y + 10 + self.enemies.index(target) * 40,
+                self.target_selection_box.width - 20,
+                30
+            )
+            target["hovered"] = target["rect"].collidepoint(mouse_pos) or target_name_rect.collidepoint(mouse_pos)
+    
+    def update_selected_action(self, mouse_pos):
+        for action in self.actions:
+            if action["rect"].collidepoint(mouse_pos):
+                print(f"{action['name']} selected!")
+                self.selected_action = action["name"]
+    
+    def execute_attack(self, mouse_pos):
+        for idx, target in enumerate(self.enemies):
+            target_name_rect = pg.Rect(
+                self.target_selection_box.x + 10,
+                self.target_selection_box.y + 10 + idx * 40,
+                self.target_selection_box.width - 20,
+                30
+            )
+            if target["rect"].collidepoint(mouse_pos) or target_name_rect.collidepoint(mouse_pos):
+                selected_target = target["name"]
+                print(f"Target {selected_target} selected!")
+    
+    def execute_defend(self):
+        print('Defending')
+    
+    def execute_skill(self):
+        print('Skilling')
+    
+    def execute_escape(self):
+        print('Escapeing')
+    
+    ###
+    
+    ### drawing
     def draw(self):
         pg.display.set_caption("{:.2f}".format(self.clock.get_fps()))
         self.screen.fill(BLACK)
 
-        self.draw_mobs()
-        self.draw_ui()
-
+        self.draw_enemies()
+        self.draw_player()
+        self.draw_actions()
+        self.draw_taget_box()
+        self.draw_targets()
         self.draw_turn_depictor()
+
         pg.display.flip()
 
     def draw_turn_depictor(self):
@@ -256,36 +280,58 @@ class CombatState(State):
         text = pg.font.Font(None, 36).render("1" if self.player_turn else "0", True, WHITE)
         text_rect = text.get_rect(center=rect.center)
         self.screen.blit(text, text_rect)
-    
-    def draw_mobs(self):
-        pass
 
-    def draw_ui(self):
-        for idx, enemy in enumerate(self.enemies):
-            enemy_rect = enemy['rect']
-            pg.draw.rect(self.screen, GRAY, enemy_rect)
-            text = self.font.render(f"Monster {idx + 1}", True, BLACK)
-            self.screen.blit(text, (enemy_rect.x + 10, enemy_rect.y + 10))
+    def draw_enemies(self):
+            ### drawing enemies
+            for idx, enemy in enumerate(self.enemies):
+                monster_color = (255, 200, 200) if enemy["hovered"] else GRAY
+
+                enemy_rect = enemy['rect']
+                pg.draw.rect(self.screen, monster_color, enemy_rect)
+                text = self.font.render(f"Monster {idx + 1}", True, BLACK)
+                self.screen.blit(text, (enemy_rect.x + 10, enemy_rect.y + 10))
         
+    def draw_player(self):
+        ### drawing player
         pg.draw.rect(self.screen, GRAY, self.player)
         player_text = self.font.render("Player", True, BLACK)
         self.screen.blit(player_text, (self.player.x + 10, self.player.y + 10))
 
+    def draw_actions(self):
+        ### drawing actions
         for action in self.actions:
             color = (180, 180, 250) if action["hovered"] or action["name"] == self.selected_action else GRAY
             pg.draw.rect(self.screen, color, action["rect"])
             text = self.font.render(action["name"], True, BLACK)
             self.screen.blit(text, (action["rect"].x + 10, action["rect"].y + 5))
-        
+    
+    def draw_taget_box(self):
+        ### drawing target box
         pg.draw.rect(self.screen, GRAY, self.target_selection_box, 2)
         target_text = self.font.render("Targets", True, WHITE)
         self.screen.blit(target_text, (self.target_selection_box.x + 10, self.target_selection_box.y - 30))
 
-        if self.selected_action == "Attack":
-            for idx, target in enumerate(self.enemies):
-                text = self.font.render(target["name"], True, WHITE)
-                self.screen.blit(text, (self.target_selection_box.x + 10, self.target_selection_box.y + 10 + idx * 40))
-        
+    def draw_targets(self):
+            ### drawing targets in taget box
+            if self.selected_action == "Attack":
+                for idx, target in enumerate(self.enemies):
+                    if target["hovered"]:
+                        text_color = (255, 0, 0)
+                        background_color = (255, 220, 220)
+                        background_rect = pg.Rect(
+                            self.target_selection_box.x + 5,
+                            self.target_selection_box.y + 5 + idx * 40,
+                            self.target_selection_box.width - 10,
+                            40
+                        )
+                        pg.draw.rect(self.screen, background_color, background_rect)
+                    else:
+                        text_color = WHITE
+
+                    text = self.font.render(target["name"], True, text_color)
+                    self.screen.blit(text, (self.target_selection_box.x + 10, self.target_selection_box.y + 10 + idx * 40))
+                
+    ###
     def update(self):
         if not self.player_turn:
             for enemy in self.enemies:
