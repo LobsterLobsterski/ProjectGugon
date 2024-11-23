@@ -9,7 +9,13 @@ from Pathfinding import Pathfinder
 from settings import GREEN, GRIDHEIGHT, GRIDWIDTH, TILESIZE
 from utils import get_squared_distance
 
+
 class MobType(Enum):
+    '''
+    Player\n
+    Goblin\n
+    Skeleton\n
+    '''
     Player = 0
     Goblin = 1
     Skeleton = 2
@@ -19,6 +25,7 @@ class Direction(Enum):
     DOWN = 2
     LEFT = 3
     RIGHT = 4
+
 
 class Spritesheet:
     def __init__(self, mob_type: MobType):
@@ -46,7 +53,6 @@ class Spritesheet:
             rect = pg.Rect(x*self.pixel_size+crop+x_offset, y*self.pixel_size+crop, self.pixel_size-crop-x_offset, self.pixel_size-crop)
         else:
             rect = pg.Rect(x*self.pixel_size, y*self.pixel_size, self.pixel_size, self.pixel_size)
-            print(rect)
         try:
             image = self.sheet.subsurface(rect)
         except ValueError as e:
@@ -59,6 +65,14 @@ class Spritesheet:
 
         return image
     
+    def get_sprite(self, row: int, col: int) -> pg.Surface:
+        rect = pg.Rect(self.pixel_size*row,
+                       self.pixel_size*col,
+                       self.pixel_size,
+                       self.pixel_size
+        )
+        return self.sheet.subsurface(rect)
+
 
 class GameObject(pg.sprite.Sprite):
     number_of_obejects=0
@@ -106,7 +120,11 @@ class Creature(GameObject):
         self.kill()
         # self.spawn_corpse()
 
-        
+      
+class CombatMob:
+    def __init__(self):
+        pass
+
 
 class Player(Creature):
     def __init__(self, groups: Iterable, collision_layers: tuple, init_x_pos: int, init_y_pos: int):
@@ -121,6 +139,10 @@ class Player(Creature):
         self.collision_layers = collision_layers
         self.direction = Direction.RIGHT
 
+    def get_combat_sprite(self):
+        self.skills = ['skill1', 'skill2']
+        return CombatPlayer(self.health, self.damage, self.skills)
+    
     def simple_attack(self, target: Creature):
         if isinstance(target, Creature):
             print(f'Player attacked {target}')
@@ -177,7 +199,26 @@ class Player(Creature):
             self.image = self.spritesheet.image_at((5, 5))
         
 
-class Mob(Creature):
+class CombatPlayer:
+    def __init__(self, health: int, damage: int, skills: list):
+        self.spritesheet = Spritesheet(MobType.Player)
+        self.image = self.spritesheet.get_sprite(5, 7)
+        self.rect = pg.Rect(50, 400, 100, 50)
+        self.health = health
+        self.damage = damage
+        self.skills = skills
+        
+    def attack(self, target: CombatMob):
+        print('player attacked', target.name)
+
+    def defend(self):
+        print('player defended')
+
+    def skill(self, selected):
+        print('player skilled!', selected)
+
+
+class MapMob(Creature):
     def __init__(self, game, groups: Iterable, init_x_pos: int, init_y_pos: int, health:int, attack_range:int, damage:int, mob_type: MobType):
         self.spritesheet = Spritesheet(mob_type)
         
@@ -290,7 +331,7 @@ class Mob(Creature):
         self.rect.y = self.y_pos * TILESIZE
 
 
-class Goblin(Mob):
+class Goblin(MapMob):
     def __init__(self, game, groups: Iterable, init_x_pos: int, init_y_pos: int, health:int, attack_range:int, damage:int):
         super().__init__(game, groups, init_x_pos, init_y_pos, health, attack_range, damage, MobType.Goblin)
 
@@ -306,7 +347,7 @@ class Goblin(Mob):
     ###
 
 
-class Skeleton(Mob):
+class Skeleton(MapMob):
     def __init__(self, game, groups: Iterable, init_x_pos: int, init_y_pos: int, health:int, attack_range:int, damage:int):
         super().__init__(game, groups, init_x_pos, init_y_pos, health, attack_range, damage, MobType.Skeleton)
 
@@ -315,6 +356,39 @@ class Skeleton(Mob):
             self.in_attack_range: [self.follow_path, self.attack]
         }
         self.bahaviour_tree = self.init_behaviour(behaviour_tree)
+
+        def get_combat_skeleton(self):
+            return CombatSkeleton(self.health, self.damage)
+
+
+class CombatSkeleton(CombatMob):
+    skeleton_counter=0
+    def __init__(self, health: int, damage: int):
+        super().__init__()
+        self.spritesheet = Spritesheet(MobType.Skeleton)
+        
+        self.image = self.spritesheet.get_sprite(random.randint(0, 2), 0)
+        self.image = pg.transform.scale(self.image, (128, 128))
+
+        self.rect = self.image.get_rect()
+        self.health = health
+        self.damage = damage
+
+        CombatSkeleton.skeleton_counter+=1
+        self.name = f"Skeleton {self.skeleton_counter}"
+        self.hovered = False
+
+    def fight(self):
+        print(self.name, 'is fighting!!!')
+        
+        
+    def attack(self, target):
+        print('skeleton attacked', target)
+    def defend(self):
+        print('skeleton defended')
+    def skill(self):
+        print('skeleton skilled!')
+
 
 class Wall(GameObject):
     def __init__(self, sprite_groups: Iterable, x_pos: int, y_pos: int):

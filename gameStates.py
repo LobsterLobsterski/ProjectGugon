@@ -6,7 +6,7 @@ import pygame as pg
 from map import Map, Viewport
 from proceduralGeneration import ProceduralGenerationType
 from settings import BGCOLOR, BLACK, FPS, GRAY, HEIGHT, LIGHTGREY, TILESIZE, WHITE, WIDTH, YELLOW
-from sprites import MobType, Player, Skeleton
+from sprites import CombatSkeleton, MobType, Player, Skeleton
 
 class State:
     def __init__(self, game, clock, screen):
@@ -36,7 +36,7 @@ class WorldMapState(State):
         self.mob_layer = pg.sprite.Group()
 
         self.map = Map((self.all_sprites, self.background_layer), 
-                       (64, 48), map_generator_type=ProceduralGenerationType.CA)
+                       (64, 48), map_generator_type=ProceduralGenerationType.BSP)
         
         player_pos_x, player_pos_y = self.map.get_initial_player_pos()
         self.player = Player((self.all_sprites, self.player_layer), 
@@ -130,7 +130,7 @@ class WorldMapState(State):
 
                 if event.key == pg.K_c:
                     print('pressed c')
-                    self.game.change_state(GameState.Combat)
+                    self.game.change_state(GameState.Combat, MobType.Skeleton)
                     self.game.run()
                 
                 #when player does an action, switch the turn
@@ -140,17 +140,16 @@ class WorldMapState(State):
 
        
 class CombatState(State):
-    def __init__(self, game, clock, screen, monsterType: MobType):
+    def __init__(self, game, clock, screen, monster_type: MobType):
         super().__init__(game, clock, screen)
         self.font = pg.font.Font(None, 36)
         self.player_turn = True
+        self.player = self.game.player.get_combat_sprite()
 
         self.enemies = []
-        self.generate_encounter(monsterType)
+        self.generate_encounter(monster_type)
 
         self.selected_action = None
-
-        self.player = pg.Rect(50, 400, 100, 50)  # Player box
         self.actions = [
             {"name": "Attack", "rect": pg.Rect(50, HEIGHT-250, 150, 40), "hovered": False},
             {"name": "Defend", "rect": pg.Rect(50, HEIGHT-200, 150, 40), "hovered": False},
@@ -161,15 +160,25 @@ class CombatState(State):
 
         self.new()
 
-    def generate_encounter(self, monsterType: MobType):
+    def generate_mob(self, mob_type: MobType, mob_centre: tuple[int, int]):
+        if mob_type == MobType.Skeleton:
+            mob = CombatSkeleton(30, 10)
+            mob.rect = mob.image.get_rect(center=mob_centre)
+            return mob
+        else:
+            raise NotImplementedError(f'generation of {mob_type} not implemented yet!')
+    
+    def generate_encounter(self, mob_type: MobType):
         num_of_enemies = random.randint(1, 4)
         screen_width_per_enemy = WIDTH//num_of_enemies
         enemy_width = 150
         for idx in range(num_of_enemies):
             enemy_midpoint = (2*screen_width_per_enemy*idx + screen_width_per_enemy)//2
             enemy_leftmost_pos = enemy_midpoint-enemy_width//2
-            enemy = {"name": f"Monster {idx+1}", "rect": pg.Rect(enemy_leftmost_pos, 100, enemy_width, 50), "hovered": False}
-            self.enemies.append(enemy)
+            mob_pos = pg.Rect(enemy_leftmost_pos, 100, enemy_width, 50)
+
+            mob = self.generate_mob(mob_type, mob_pos.center)
+            self.enemies.append(mob)
         
     def new(self):
         pass
@@ -200,14 +209,13 @@ class CombatState(State):
                     self.execute_attack(mouse_pos)
 
                 elif self.selected_action == "Defend":
-                    self.execute_defend()     
+                    self.execute_defend()
 
                 elif self.selected_action == "Skill":
                     self.execute_skill()
 
                 elif self.selected_action == "Escape":
                     self.execute_escape()
-
 
             if event.type == pg.KEYDOWN:
                 if event.key == pg.K_ESCAPE:
@@ -216,21 +224,20 @@ class CombatState(State):
                 if event.key == pg.K_c:
                     self.game.change_state(GameState.Map)
                     self.game.run()
-                             
-    
+                               
     def update_action_hover(self, mouse_pos):
         for action in self.actions:
             action["hovered"] = action["rect"].collidepoint(mouse_pos)
     
     def update_target_hover(self, mouse_pos):
-        for target in self.enemies:
+        for enemy in self.enemies:
             target_name_rect = pg.Rect(
                 self.target_selection_box.x + 10,
-                self.target_selection_box.y + 10 + self.enemies.index(target) * 40,
+                self.target_selection_box.y + 10 + self.enemies.index(enemy) * 40,
                 self.target_selection_box.width - 20,
                 30
             )
-            target["hovered"] = target["rect"].collidepoint(mouse_pos) or target_name_rect.collidepoint(mouse_pos)
+            enemy.hovered = enemy.rect.collidepoint(mouse_pos) or target_name_rect.collidepoint(mouse_pos)
     
     def update_selected_action(self, mouse_pos):
         for action in self.actions:
@@ -239,28 +246,29 @@ class CombatState(State):
                 self.selected_action = action["name"]
     
     def execute_attack(self, mouse_pos):
-        for idx, target in enumerate(self.enemies):
+        for enemy in self.enemies:
             target_name_rect = pg.Rect(
                 self.target_selection_box.x + 10,
-                self.target_selection_box.y + 10 + idx * 40,
+                self.target_selection_box.y + 10 + self.enemies.index(enemy) * 40,
                 self.target_selection_box.width - 20,
                 30
             )
-            if target["rect"].collidepoint(mouse_pos) or target_name_rect.collidepoint(mouse_pos):
-                selected_target = target["name"]
-                print(f"Target {selected_target} selected!")
-    
+            if enemy.rect.collidepoint(mouse_pos) or target_name_rect.collidepoint(mouse_pos):
+                self.player.attack(enemy)
+                self.player_turn=False
+       
     def execute_defend(self):
-        print('Defending')
-    
-    def execute_skill(self):
-        print('Skilling')
+        self.player.defend()
+        self.player_turn=False
+
+    def execute_skill(self, mouse_pos):
+        self.player.skill(mouse_pos)
+        self.player_turn=False
     
     def execute_escape(self):
         print('Escapeing')
-    
-    ###
-    
+        self.player_turn=False
+        
     ### drawing
     def draw(self):
         pg.display.set_caption("{:.2f}".format(self.clock.get_fps()))
@@ -283,20 +291,21 @@ class CombatState(State):
         self.screen.blit(text, text_rect)
 
     def draw_enemies(self):
-            ### drawing enemies
-            for idx, enemy in enumerate(self.enemies):
-                monster_color = (255, 200, 200) if enemy["hovered"] else GRAY
+        ### drawing enemies
+        for enemy in self.enemies:
+            if enemy.hovered:
+                tinted = enemy.image.copy()
+                red_tint = pg.Surface(enemy.image.get_size(), flags=pg.SRCALPHA)
+                red_tint.fill((155, 100, 100, 100))
+                tinted.blit(red_tint, (0, 0))
+                self.screen.blit(tinted, enemy.rect)
+            else:
+                self.screen.blit(enemy.image, enemy.rect)
 
-                enemy_rect = enemy['rect']
-                pg.draw.rect(self.screen, monster_color, enemy_rect)
-                text = self.font.render(f"Monster {idx + 1}", True, BLACK)
-                self.screen.blit(text, (enemy_rect.x + 10, enemy_rect.y + 10))
         
     def draw_player(self):
         ### drawing player
-        pg.draw.rect(self.screen, GRAY, self.player)
-        player_text = self.font.render("Player", True, BLACK)
-        self.screen.blit(player_text, (self.player.x + 10, self.player.y + 10))
+        self.screen.blit(self.player.image, self.player.rect)
 
     def draw_actions(self):
         ### drawing actions
@@ -315,8 +324,8 @@ class CombatState(State):
     def draw_targets(self):
             ### drawing targets in taget box
             if self.selected_action == "Attack":
-                for idx, target in enumerate(self.enemies):
-                    if target["hovered"]:
+                for idx, enemy in enumerate(self.enemies):
+                    if enemy.hovered:
                         text_color = (255, 0, 0)
                         background_color = (255, 220, 220)
                         background_rect = pg.Rect(
@@ -329,7 +338,7 @@ class CombatState(State):
                     else:
                         text_color = WHITE
 
-                    text = self.font.render(target["name"], True, text_color)
+                    text = self.font.render(enemy.name, True, text_color)
                     self.screen.blit(text, (self.target_selection_box.x + 10, self.target_selection_box.y + 10 + idx * 40))
                 
     ###
@@ -337,6 +346,7 @@ class CombatState(State):
         if not self.player_turn:
             for enemy in self.enemies:
                 enemy.fight()
+
             self.player_turn = True
 
 class MenuState:
