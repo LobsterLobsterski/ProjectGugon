@@ -98,16 +98,20 @@ class GameObject(pg.sprite.Sprite):
 
 
 class Creature(GameObject):
-    def __init__(self, groups: Iterable, image: pg.Surface, x: int, y: int, health: int, damage: int):
+    def __init__(self, groups: Iterable, image: pg.Surface, x: int, y: int, health: int, damage: int, attack: int, defence: int, armour: int):
         super().__init__(groups, image, x, y)
         self.health = health
         self.attack_range = range
         self.damage = damage
+        self.attack = attack  #chance to hit
+        self.defence = defence  #chance to dodge
+        self.armour = armour  #damage resistance
+
         self.alive = True
 
     def receive_damage(self, damage: int):
-        print(self.id, 'received', damage, 'damage!')
-        self.health -= damage
+        print(self.id, 'received', max(0, damage - self.armour), 'damage!')
+        self.health -= max(0, damage - self.armour)
         if self.health <= 0:
             print(self.id, 'died!')
             self.die()
@@ -121,17 +125,6 @@ class Creature(GameObject):
         # self.spawn_corpse()
 
       
-class CombatMob(Creature):
-    def __init__(self, groups, image, x, y, health, damage):
-        super().__init__(groups, image, x, y, health, damage)
-
-    def take_damage(self, damage):
-        self.health-=damage
-        if self.health<=0:
-            print('died!')
-            self.kill()
-
-
 class Player(Creature):
     def __init__(self, groups: Iterable, collision_layers: tuple, init_x_pos: int, init_y_pos: int):
         self.spritesheet = Spritesheet(MobType.Player)
@@ -139,7 +132,7 @@ class Player(Creature):
         super().__init__(groups, 
                             self.spritesheet.image_at((0, 0)),
                             init_x_pos, init_y_pos,
-                            100, 10
+                            100, 10, 10000, 30, 1
                             )
 
         self.collision_layers = collision_layers
@@ -147,13 +140,8 @@ class Player(Creature):
 
     def get_combat_sprite(self, groups: tuple[pg.sprite.Group]):
         self.skills = ['skill1', 'skill2']
-        return CombatPlayer(groups, self.health, self.damage, self.skills)
-    
-    def simple_attack(self, target: Creature):
-        if isinstance(target, Creature):
-            print(f'Player attacked {target}')
-            target.receive_damage(self.damage)
-    
+        return CombatPlayer(groups, self.health, self.damage, self.attack, self.defence, self.armour, self.skills)
+     
     def move(self, key: pg.event):
         dx, dy = 0, 0
         if key == pg.K_LEFT:
@@ -206,22 +194,25 @@ class Player(Creature):
         
 
 class CombatPlayer(Creature):
-    def __init__(self, groups, health: int, damage: int, skills: list):
+    def __init__(self, groups, health: int, damage: int, attack:int, defence: int, armour: int, skills: list):
         self.spritesheet = Spritesheet(MobType.Player)
         super().__init__(groups, self.spritesheet.get_sprite(5, 7), 
-                         0, 0, health, damage)
+                         0, 0, health, damage, attack, defence, armour)
         
         self.rect = pg.Rect(50, 400, 100, 50)
         self.skills = skills
         
-    def attack(self, target: CombatMob):
+    def attack_action(self, target: Creature):
         print('player attacked', target.name)
-        target.receive_damage(self.damage)
+        if self.attack+random.randint(1, 20) > target.defence:
+            target.receive_damage(self.damage)
+        else:
+            print('Attack on', target, 'missed!')
 
-    def defend(self):
+    def defend_action(self):
         print('player defended')
 
-    def skill(self, selected):
+    def skill_action(self, selected):
         print('player skilled!', selected)
 
 
@@ -360,16 +351,13 @@ class Skeleton(MapMob):
         }
         self.bahaviour_tree = self.init_behaviour(behaviour_tree)
 
-        def get_combat_skeleton(self):
-            return CombatSkeleton(self.health, self.damage)
-
 
 class CombatSkeleton(Creature):
     skeleton_counter=0
-    def __init__(self, groups, health: int, damage: int, centre: tuple[int, int]):
+    def __init__(self, groups, centre: tuple[int, int]):
         self.spritesheet = Spritesheet(MobType.Skeleton)
         super().__init__(groups, self.spritesheet.get_sprite(random.randint(0, 2), 0), 
-                         0, 0, health, damage)
+                         0, 0, 30, 10, 20, 30, 5)
         
         self.image = pg.transform.scale(self.image, (128, 128))
         self.rect = self.image.get_rect(center=centre)
@@ -381,11 +369,11 @@ class CombatSkeleton(Creature):
     def fight(self):
         print(self.name, 'is fighting!!!')
         
-    def attack(self, target):
+    def attack_action(self, target):
         print('skeleton attacked', target)
-    def defend(self):
+    def defend_action(self):
         print('skeleton defended')
-    def skill(self):
+    def skill_action(self):
         print('skeleton skilled!')
 
 

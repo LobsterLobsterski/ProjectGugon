@@ -163,7 +163,7 @@ class CombatState(State):
 
     def generate_mob(self, mob_type: MobType, mob_centre: tuple[int, int]):
         if mob_type == MobType.Skeleton:
-            CombatSkeleton((self.all_sprites, self.mobs_group), 30, 10, mob_centre)
+            CombatSkeleton((self.all_sprites, self.mobs_group), mob_centre)
         else:
             raise NotImplementedError(f'generation of {mob_type} not implemented yet!')
     
@@ -253,15 +253,15 @@ class CombatState(State):
                 30
             )
             if enemy.rect.collidepoint(mouse_pos) or target_name_rect.collidepoint(mouse_pos):
-                self.player.attack(enemy)
+                self.player.attack_action(enemy)
                 self.player_turn=False
        
     def execute_defend(self):
-        self.player.defend()
+        self.player.defend_action()
         self.player_turn=False
 
     def execute_skill(self, mouse_pos):
-        self.player.skill(mouse_pos)
+        self.player.skill_action(mouse_pos)
         self.player_turn=False
     
     def execute_escape(self):
