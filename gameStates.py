@@ -340,8 +340,10 @@ class CombatState(State):
     def update(self):
         if not self.player_turn:
             for enemy in self.mobs_group:
+                enemy.tickers_update()
                 enemy.fight()
 
+            self.player.tickers_update()
             self.player_turn = True
 
 class MenuState:

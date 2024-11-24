@@ -128,14 +128,14 @@ class Creature(GameObject):
         # drawn
         self.kill()
         # self.spawn_corpse()
-
-    def update(self, *args: Any, **kwargs: Any) -> None:
-        super().update(*args, **kwargs)
-        for effect in self.status_effects:
-            if effect.is_ticking():
-                return effect.update()
-            self.status_effects.remove(effect)
             
+    def tickers_update(self):
+        for s in self.status_effects:
+            s.update()
+            if not s.is_ticking():
+                print('[tickers_update] removing', s)
+                self.status_effects.remove(s)
+
 
 class Player(Creature):
     def __init__(self, groups: Iterable, collision_layers: tuple, init_x_pos: int, init_y_pos: int):
@@ -365,6 +365,7 @@ class CombatSkeleton(Creature):
     skeleton_counter=0
     def __init__(self, groups, player: CombatPlayer, centre: tuple[int, int]):
         self.spritesheet = Spritesheet(MobType.Skeleton)
+        self.mobs = groups[1]
         super().__init__(groups, self.spritesheet.get_sprite(random.randint(0, 2), 0), 
                          0, 0, 30, 10, 20, 30, 5)
         
@@ -386,8 +387,9 @@ class CombatSkeleton(Creature):
         #
 
         behaviour_tree = {
+            self.is_alone: [self.is_opponent_distracted, self.rampage_off_cooldown],
             self.is_opponent_distracted: [self.distract_off_cooldown, self.rampage_off_cooldown], 
-            self.distract_off_cooldown: [self.attack_action, self.skills[0].activate],
+            self.distract_off_cooldown: [self.rampage_off_cooldown, self.skills[0].activate],
             self.rampage_off_cooldown: [self.attack_action, self.skills[1].activate]
         }
 
@@ -395,16 +397,17 @@ class CombatSkeleton(Creature):
 
 
     def fight(self):
+        print('\n')
         action = self.bahaviour_tree.find_action()
-        print('action:', action)
         action()
     
     ### conditions
+    def is_alone(self):
+        return len(self.mobs) == 1
+    
     def is_opponent_distracted(self):
-        print('player status effects:', self.player.status_effects, 'Distracted' in self.player.status_effects)
         return 'Distracted' in self.player.status_effects
     def distract_off_cooldown(self):
-        print('distract_off_cooldown', self.skills[0].timer, not self.skills[0].is_ticking())
         return not self.skills[0].is_ticking()
     def rampage_off_cooldown(self):
         return not self.skills[1].is_ticking()
@@ -427,6 +430,11 @@ class CombatSkeleton(Creature):
             self.attack_action()
         self.attack+=15    
     ###
+
+    def tickers_update(self):
+        super().tickers_update()
+        for s in self.skills:
+            s.update()
 
 
 class Wall(GameObject):

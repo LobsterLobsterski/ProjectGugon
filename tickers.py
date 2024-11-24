@@ -6,7 +6,8 @@ class Ticker:
         return self.timer > 0
     
     def update(self):
-        self.timer-=1
+        if self.is_ticking():
+            self.timer-=1
 
 
 class Skill(Ticker):
@@ -31,10 +32,7 @@ class StatusEffect(Ticker):
         self.apply()
     
     def apply(self):
-        print('applying', self.effect)
-
-    def remove(self):
-        pass
+        print('[StatusEffect] applying', self.effect)
 
     def  __eq__(self, value: str) -> bool:
         return self.name == value
