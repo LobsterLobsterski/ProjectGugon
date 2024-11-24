@@ -98,7 +98,7 @@ class GameObject(pg.sprite.Sprite):
 
 
 class Creature(GameObject):
-    def __init__(self, groups: Iterable, image: pg.Surface, x: int, y: int, health: int, range: int, damage: int):
+    def __init__(self, groups: Iterable, image: pg.Surface, x: int, y: int, health: int, damage: int):
         super().__init__(groups, image, x, y)
         self.health = health
         self.attack_range = range
@@ -121,9 +121,15 @@ class Creature(GameObject):
         # self.spawn_corpse()
 
       
-class CombatMob:
-    def __init__(self):
-        pass
+class CombatMob(Creature):
+    def __init__(self, groups, image, x, y, health, damage):
+        super().__init__(groups, image, x, y, health, damage)
+
+    def take_damage(self, damage):
+        self.health-=damage
+        if self.health<=0:
+            print('died!')
+            self.kill()
 
 
 class Player(Creature):
@@ -133,15 +139,15 @@ class Player(Creature):
         super().__init__(groups, 
                             self.spritesheet.image_at((0, 0)),
                             init_x_pos, init_y_pos,
-                            100, 1, 10
+                            100, 10
                             )
 
         self.collision_layers = collision_layers
         self.direction = Direction.RIGHT
 
-    def get_combat_sprite(self):
+    def get_combat_sprite(self, groups: tuple[pg.sprite.Group]):
         self.skills = ['skill1', 'skill2']
-        return CombatPlayer(self.health, self.damage, self.skills)
+        return CombatPlayer(groups, self.health, self.damage, self.skills)
     
     def simple_attack(self, target: Creature):
         if isinstance(target, Creature):
@@ -199,17 +205,18 @@ class Player(Creature):
             self.image = self.spritesheet.image_at((5, 5))
         
 
-class CombatPlayer:
-    def __init__(self, health: int, damage: int, skills: list):
+class CombatPlayer(Creature):
+    def __init__(self, groups, health: int, damage: int, skills: list):
         self.spritesheet = Spritesheet(MobType.Player)
-        self.image = self.spritesheet.get_sprite(5, 7)
+        super().__init__(groups, self.spritesheet.get_sprite(5, 7), 
+                         0, 0, health, damage)
+        
         self.rect = pg.Rect(50, 400, 100, 50)
-        self.health = health
-        self.damage = damage
         self.skills = skills
         
     def attack(self, target: CombatMob):
         print('player attacked', target.name)
+        target.receive_damage(self.damage)
 
     def defend(self):
         print('player defended')
@@ -218,13 +225,13 @@ class CombatPlayer:
         print('player skilled!', selected)
 
 
-class MapMob(Creature):
+class MapMob(GameObject):
     def __init__(self, game, groups: Iterable, init_x_pos: int, init_y_pos: int, health:int, attack_range:int, damage:int, mob_type: MobType):
         self.spritesheet = Spritesheet(mob_type)
         
         super().__init__(groups, self.spritesheet.image_at((0, 0)), 
                          init_x_pos, init_y_pos,
-                         health, attack_range, damage)
+                         )
         
         self.rect.x = self.x_pos * TILESIZE
         self.rect.y = self.y_pos * TILESIZE
@@ -235,16 +242,12 @@ class MapMob(Creature):
         self.path_iterator = iter(self.path)
         ###
         self.last_known_player_pos = self.game.player.get_position()
-    
-    def fight(self):
-        raise NotImplementedError('Enemy cannot fight yet!')
-    
+      
     def act(self):
-        if self.alive:
-            print(f'\n{type(self).__name__} {self.id} acts:')
+        print(f'\n{type(self).__name__} {self.id} acts:')
 
-            action = self.bahaviour_tree.find_action()
-            action()
+        action = self.bahaviour_tree.find_action()
+        action()
         
     ###basic behaviour actions
     def follow_path(self):
@@ -283,7 +286,7 @@ class MapMob(Creature):
     def in_attack_range(self) -> bool:
         ### needs to be here otherwise the mob doesn't refind path after attacking
         self.update_path(self.last_known_player_pos)
-        return get_squared_distance(self.get_position(), self.last_known_player_pos) <= self.attack_range
+        return get_squared_distance(self.get_position(), self.last_known_player_pos) <= 1
     ###
 
     def get_random_valid_roam_goal(self, distance=5):
@@ -361,18 +364,15 @@ class Skeleton(MapMob):
             return CombatSkeleton(self.health, self.damage)
 
 
-class CombatSkeleton(CombatMob):
+class CombatSkeleton(Creature):
     skeleton_counter=0
-    def __init__(self, health: int, damage: int):
-        super().__init__()
+    def __init__(self, groups, health: int, damage: int, centre: tuple[int, int]):
         self.spritesheet = Spritesheet(MobType.Skeleton)
+        super().__init__(groups, self.spritesheet.get_sprite(random.randint(0, 2), 0), 
+                         0, 0, health, damage)
         
-        self.image = self.spritesheet.get_sprite(random.randint(0, 2), 0)
         self.image = pg.transform.scale(self.image, (128, 128))
-
-        self.rect = self.image.get_rect()
-        self.health = health
-        self.damage = damage
+        self.rect = self.image.get_rect(center=centre)
 
         CombatSkeleton.skeleton_counter+=1
         self.name = f"Skeleton {self.skeleton_counter}"
@@ -380,7 +380,6 @@ class CombatSkeleton(CombatMob):
 
     def fight(self):
         print(self.name, 'is fighting!!!')
-        
         
     def attack(self, target):
         print('skeleton attacked', target)

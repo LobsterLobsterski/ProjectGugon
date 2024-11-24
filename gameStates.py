@@ -144,9 +144,10 @@ class CombatState(State):
         super().__init__(game, clock, screen)
         self.font = pg.font.Font(None, 36)
         self.player_turn = True
-        self.player = self.game.player.get_combat_sprite()
+        self.new()
 
-        self.enemies = []
+        self.player = self.game.player.get_combat_sprite((self.all_sprites))
+
         self.generate_encounter(monster_type)
 
         self.selected_action = None
@@ -158,13 +159,11 @@ class CombatState(State):
         ]
         self.target_selection_box = pg.Rect(250, HEIGHT-260, WIDTH-250-50, 200)
 
-        self.new()
+        
 
     def generate_mob(self, mob_type: MobType, mob_centre: tuple[int, int]):
         if mob_type == MobType.Skeleton:
-            mob = CombatSkeleton(30, 10)
-            mob.rect = mob.image.get_rect(center=mob_centre)
-            return mob
+            CombatSkeleton((self.all_sprites, self.mobs_group), 30, 10, mob_centre)
         else:
             raise NotImplementedError(f'generation of {mob_type} not implemented yet!')
     
@@ -177,11 +176,11 @@ class CombatState(State):
             enemy_leftmost_pos = enemy_midpoint-enemy_width//2
             mob_pos = pg.Rect(enemy_leftmost_pos, 100, enemy_width, 50)
 
-            mob = self.generate_mob(mob_type, mob_pos.center)
-            self.enemies.append(mob)
+            self.generate_mob(mob_type, mob_pos.center)
         
     def new(self):
-        pass
+        self.all_sprites = pg.sprite.Group()
+        self.mobs_group = pg.sprite.Group()
 
     def run(self):
         while True:
@@ -212,7 +211,7 @@ class CombatState(State):
                     self.execute_defend()
 
                 elif self.selected_action == "Skill":
-                    self.execute_skill()
+                    self.execute_skill(mouse_pos)
 
                 elif self.selected_action == "Escape":
                     self.execute_escape()
@@ -230,10 +229,10 @@ class CombatState(State):
             action["hovered"] = action["rect"].collidepoint(mouse_pos)
     
     def update_target_hover(self, mouse_pos):
-        for enemy in self.enemies:
+        for idx, enemy in enumerate(self.mobs_group):
             target_name_rect = pg.Rect(
                 self.target_selection_box.x + 10,
-                self.target_selection_box.y + 10 + self.enemies.index(enemy) * 40,
+                self.target_selection_box.y + 10 + idx * 40,
                 self.target_selection_box.width - 20,
                 30
             )
@@ -246,10 +245,10 @@ class CombatState(State):
                 self.selected_action = action["name"]
     
     def execute_attack(self, mouse_pos):
-        for enemy in self.enemies:
+        for idx, enemy in enumerate(self.mobs_group):
             target_name_rect = pg.Rect(
                 self.target_selection_box.x + 10,
-                self.target_selection_box.y + 10 + self.enemies.index(enemy) * 40,
+                self.target_selection_box.y + 10 + idx * 40,
                 self.target_selection_box.width - 20,
                 30
             )
@@ -292,7 +291,7 @@ class CombatState(State):
 
     def draw_enemies(self):
         ### drawing enemies
-        for enemy in self.enemies:
+        for enemy in self.mobs_group:
             if enemy.hovered:
                 tinted = enemy.image.copy()
                 red_tint = pg.Surface(enemy.image.get_size(), flags=pg.SRCALPHA)
@@ -301,8 +300,7 @@ class CombatState(State):
                 self.screen.blit(tinted, enemy.rect)
             else:
                 self.screen.blit(enemy.image, enemy.rect)
-
-        
+     
     def draw_player(self):
         ### drawing player
         self.screen.blit(self.player.image, self.player.rect)
@@ -324,7 +322,7 @@ class CombatState(State):
     def draw_targets(self):
             ### drawing targets in taget box
             if self.selected_action == "Attack":
-                for idx, enemy in enumerate(self.enemies):
+                for idx, enemy in enumerate(self.mobs_group):
                     if enemy.hovered:
                         text_color = (255, 0, 0)
                         background_color = (255, 220, 220)
@@ -344,7 +342,7 @@ class CombatState(State):
     ###
     def update(self):
         if not self.player_turn:
-            for enemy in self.enemies:
+            for enemy in self.mobs_group:
                 enemy.fight()
 
             self.player_turn = True
