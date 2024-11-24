@@ -7,6 +7,7 @@ from enum import Enum
 from AI.BehaviourTree import BehaviourTree
 from Pathfinding import Pathfinder
 from settings import GREEN, GRIDHEIGHT, GRIDWIDTH, TILESIZE
+from tickers import Skill, StatusEffect
 from utils import get_squared_distance
 
 
@@ -96,16 +97,20 @@ class GameObject(pg.sprite.Sprite):
     def get_position(self)->tuple[int, int]:
         return self.x_pos, self.y_pos
 
+    def init_behaviour(self, behaviour_tree: Dict[Callable, Callable]) -> BehaviourTree:
+        return BehaviourTree(self, behaviour_tree)
 
 class Creature(GameObject):
     def __init__(self, groups: Iterable, image: pg.Surface, x: int, y: int, health: int, damage: int, attack: int, defence: int, armour: int):
         super().__init__(groups, image, x, y)
+        self.max_health = health
         self.health = health
         self.attack_range = range
         self.damage = damage
         self.attack = attack  #chance to hit
         self.defence = defence  #chance to dodge
         self.armour = armour  #damage resistance
+        self.status_effects = []
 
         self.alive = True
 
@@ -124,7 +129,14 @@ class Creature(GameObject):
         self.kill()
         # self.spawn_corpse()
 
-      
+    def update(self, *args: Any, **kwargs: Any) -> None:
+        super().update(*args, **kwargs)
+        for effect in self.status_effects:
+            if effect.is_ticking():
+                return effect.update()
+            self.status_effects.remove(effect)
+            
+
 class Player(Creature):
     def __init__(self, groups: Iterable, collision_layers: tuple, init_x_pos: int, init_y_pos: int):
         self.spritesheet = Spritesheet(MobType.Player)
@@ -293,9 +305,6 @@ class MapMob(GameObject):
 
         return self.get_random_valid_roam_goal(distance)
     
-    def init_behaviour(self, behaviour_tree: Dict[Callable, Callable]) -> BehaviourTree:
-        return BehaviourTree(self, behaviour_tree)
-    
     def update_last_known_player_pos(self):
         self.last_known_player_pos = self.game.player.get_position()
 
@@ -333,7 +342,7 @@ class Goblin(MapMob):
             self.detect_player: [self.roam, self.in_attack_range], 
             self.in_attack_range: [self.follow_path, self.attack]
         }
-        self.bahaviour_tree = super().init_behaviour(behaviour_tree)
+        self.bahaviour_tree = self.init_behaviour(behaviour_tree)
     
     ### complex/specific  behaviour actions
     ###
@@ -354,7 +363,7 @@ class Skeleton(MapMob):
 
 class CombatSkeleton(Creature):
     skeleton_counter=0
-    def __init__(self, groups, centre: tuple[int, int]):
+    def __init__(self, groups, player: CombatPlayer, centre: tuple[int, int]):
         self.spritesheet = Spritesheet(MobType.Skeleton)
         super().__init__(groups, self.spritesheet.get_sprite(random.randint(0, 2), 0), 
                          0, 0, 30, 10, 20, 30, 5)
@@ -366,15 +375,58 @@ class CombatSkeleton(Creature):
         self.name = f"Skeleton {self.skeleton_counter}"
         self.hovered = False
 
+        # will need to be a class
+        self.skills = [
+            Skill('Distract', self.distract, 3),
+            Skill('Rampage', self.rampage, 5)
+        ]
+        self.player = player
+        #temp
+        self.target = self.player
+        #
+
+        behaviour_tree = {
+            self.is_opponent_distracted: [self.distract_off_cooldown, self.rampage_off_cooldown], 
+            self.distract_off_cooldown: [self.attack_action, self.skills[0].activate],
+            self.rampage_off_cooldown: [self.attack_action, self.skills[1].activate]
+        }
+
+        self.bahaviour_tree = self.init_behaviour(behaviour_tree)
+
+
     def fight(self):
-        print(self.name, 'is fighting!!!')
-        
-    def attack_action(self, target):
-        print('skeleton attacked', target)
+        action = self.bahaviour_tree.find_action()
+        print('action:', action)
+        action()
+    
+    ### conditions
+    def is_opponent_distracted(self):
+        print('player status effects:', self.player.status_effects, 'Distracted' in self.player.status_effects)
+        return 'Distracted' in self.player.status_effects
+    def distract_off_cooldown(self):
+        print('distract_off_cooldown', self.skills[0].timer, not self.skills[0].is_ticking())
+        return not self.skills[0].is_ticking()
+    def rampage_off_cooldown(self):
+        return not self.skills[1].is_ticking()
+    ###
+
+    ### actions 
+    def attack_action(self):
+        print('skeleton attacked', self.target)
     def defend_action(self):
         print('skeleton defended')
-    def skill_action(self):
-        print('skeleton skilled!')
+    
+    def distract(self):
+        self.target.status_effects.append(StatusEffect('Distracted', 'lower def', 1))
+    
+    def rampage(self):
+        print('rampage: attacking multiple times with lowered attack and defence', self.target)
+        self.status_effects.append(StatusEffect('Out of Position', 'significantly lower def', 3))
+        self.attack-=15
+        for _ in range(3):
+            self.attack_action()
+        self.attack+=15    
+    ###
 
 
 class Wall(GameObject):

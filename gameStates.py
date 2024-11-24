@@ -159,11 +159,9 @@ class CombatState(State):
         ]
         self.target_selection_box = pg.Rect(250, HEIGHT-260, WIDTH-250-50, 200)
 
-        
-
     def generate_mob(self, mob_type: MobType, mob_centre: tuple[int, int]):
         if mob_type == MobType.Skeleton:
-            CombatSkeleton((self.all_sprites, self.mobs_group), mob_centre)
+            CombatSkeleton((self.all_sprites, self.mobs_group), self.player, mob_centre)
         else:
             raise NotImplementedError(f'generation of {mob_type} not implemented yet!')
     
@@ -241,7 +239,6 @@ class CombatState(State):
     def update_selected_action(self, mouse_pos):
         for action in self.actions:
             if action["rect"].collidepoint(mouse_pos):
-                print(f"{action['name']} selected!")
                 self.selected_action = action["name"]
     
     def execute_attack(self, mouse_pos):
