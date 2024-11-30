@@ -1,10 +1,10 @@
 import random
-import sys
 from typing import Any, Callable, Dict, Iterable
 import pygame as pg
 from enum import Enum
 
 from AI.BehaviourTree import BehaviourTree
+from GameState import GameState
 from Pathfinding import Pathfinder
 from settings import GREEN, GRIDHEIGHT, GRIDWIDTH, TILESIZE
 from tickers import Skill, StatusEffect
@@ -138,7 +138,7 @@ class Creature(GameObject):
 
 
 class Player(Creature):
-    def __init__(self, groups: Iterable, collision_layers: tuple, init_x_pos: int, init_y_pos: int):
+    def __init__(self, game, groups: Iterable, collision_layers: tuple, init_x_pos: int, init_y_pos: int):
         self.spritesheet = Spritesheet(MobType.Player)
 
         super().__init__(groups, 
@@ -147,6 +147,7 @@ class Player(Creature):
                             100, 10, 10000, 30, 1
                             )
 
+        self.game = game
         self.collision_layers = collision_layers
         self.direction = Direction.RIGHT
 
@@ -171,8 +172,9 @@ class Player(Creature):
         if collision_object is None:
             self.x_pos += dx
             self.y_pos += dy
-        else:
-            self.simple_attack(collision_object)
+
+        elif isinstance(collision_object, MapMob):
+            self.engage(collision_object)
     
     def change_direction(self, dx, dy):
         if dx > 0:
@@ -192,6 +194,11 @@ class Player(Creature):
 
         return None
 
+    def engage(self, mob):
+        print('engaging', mob)
+        self.game.initiate_combat(mob, True)
+        
+    
     def update(self):
         self.rect.x = self.x_pos * TILESIZE
         self.rect.y = self.y_pos * TILESIZE
@@ -229,22 +236,26 @@ class CombatPlayer(Creature):
 
 
 class MapMob(GameObject):
-    def __init__(self, game, groups: Iterable, init_x_pos: int, init_y_pos: int, health:int, attack_range:int, damage:int, mob_type: MobType):
+    def __init__(self, game, map, player, groups: Iterable, init_x_pos: int, init_y_pos: int, mob_type: MobType):
         self.spritesheet = Spritesheet(mob_type)
         
         super().__init__(groups, self.spritesheet.image_at((0, 0)), 
                          init_x_pos, init_y_pos,
                          )
         
+        self.mob_type = mob_type
         self.rect.x = self.x_pos * TILESIZE
         self.rect.y = self.y_pos * TILESIZE
         self.game = game
-        self.pathfinder = Pathfinder(game.map)
+        self.map = map
+        self.player = player
+
+        self.pathfinder = Pathfinder(self.map)
         ### separate class?
         self.path = []
         self.path_iterator = iter(self.path)
         ###
-        self.last_known_player_pos = self.game.player.get_position()
+        self.last_known_player_pos = self.player.get_position()
       
     def act(self):
         print(f'\n{type(self).__name__} {self.id} acts:')
@@ -266,10 +277,10 @@ class MapMob(GameObject):
         
         self.place(new_pos)
 
-    def attack(self):
-        print('\tAttacking!')
+    def engage(self):
+        print('\tengaging player!', self.mob_type)
         self.path = []
-        self.game.player.receive_damage(self.damage)
+        self.game.initiate_combat(self, False)
    
     def roam(self):
         print('\tRoaming!')
@@ -284,9 +295,9 @@ class MapMob(GameObject):
     def detect_player(self) -> bool:
         #temp, for now mobs have global awareness
         #of player as long as they're alive
-        return self.game.player.alive
+        return self.player.alive
     
-    def in_attack_range(self) -> bool:
+    def in_engage_range(self) -> bool:
         ### needs to be here otherwise the mob doesn't refind path after attacking
         self.update_path(self.last_known_player_pos)
         return get_squared_distance(self.get_position(), self.last_known_player_pos) <= 1
@@ -300,17 +311,17 @@ class MapMob(GameObject):
         y = int(min(GRIDWIDTH, max(0, y)))
         print('get_random_valid_roam_goal:', x, y)
         print('w, h:', GRIDWIDTH, GRIDHEIGHT)
-        if self.game.map.check_if_pos_is_floor((x, y)):
+        if self.map.check_if_pos_is_floor((x, y)):
             return x, y
 
         return self.get_random_valid_roam_goal(distance)
     
     def update_last_known_player_pos(self):
-        self.last_known_player_pos = self.game.player.get_position()
+        self.last_known_player_pos = self.player.get_position()
 
     def update_path(self, goal: tuple[int, int]):
-        if ( self.game.player.alive and self.player_has_moved() ) \
-                or not self.game.player.alive \
+        if ( self.player.alive and self.player_has_moved() ) \
+                or not self.player.alive \
                 or not self.path:
             
             self.update_last_known_player_pos()
@@ -318,7 +329,7 @@ class MapMob(GameObject):
             self.path_iterator = iter(self.path)
     
     def player_has_moved(self):
-        return self.last_known_player_pos != self.game.player.get_position()
+        return self.last_known_player_pos != self.player.get_position()
     
     def move(self, dx=0, dy=0):
         # print('\tMob movement')
@@ -335,12 +346,12 @@ class MapMob(GameObject):
 
 
 class Goblin(MapMob):
-    def __init__(self, game, groups: Iterable, init_x_pos: int, init_y_pos: int, health:int, attack_range:int, damage:int):
-        super().__init__(game, groups, init_x_pos, init_y_pos, health, attack_range, damage, MobType.Goblin)
+    def __init__(self, game, groups: Iterable, init_x_pos: int, init_y_pos: int):
+        super().__init__(game, groups, init_x_pos, init_y_pos, MobType.Goblin)
 
         behaviour_tree = {
-            self.detect_player: [self.roam, self.in_attack_range], 
-            self.in_attack_range: [self.follow_path, self.attack]
+            self.detect_player: [self.roam, self.in_engage_range], 
+            self.in_engage_range: [self.follow_path, self.engage]
         }
         self.bahaviour_tree = self.init_behaviour(behaviour_tree)
     
@@ -351,12 +362,12 @@ class Goblin(MapMob):
 
 
 class Skeleton(MapMob):
-    def __init__(self, game, groups: Iterable, init_x_pos: int, init_y_pos: int, health:int, attack_range:int, damage:int):
-        super().__init__(game, groups, init_x_pos, init_y_pos, health, attack_range, damage, MobType.Skeleton)
+    def __init__(self, game, map, player, groups: Iterable, init_x_pos: int, init_y_pos: int):
+        super().__init__(game, map, player, groups, init_x_pos, init_y_pos, MobType.Skeleton)
 
         behaviour_tree = {
-            self.detect_player: [self.roam, self.in_attack_range], 
-            self.in_attack_range: [self.follow_path, self.attack]
+            self.detect_player: [self.roam, self.in_engage_range], 
+            self.in_engage_range: [self.follow_path, self.engage]
         }
         self.bahaviour_tree = self.init_behaviour(behaviour_tree)
 

@@ -3,10 +3,12 @@ import random
 import sys
 import pygame as pg
 
+from GameState import GameState
 from map import Map, Viewport
 from proceduralGeneration import ProceduralGenerationType
 from settings import BGCOLOR, BLACK, FPS, GRAY, HEIGHT, LIGHTGREY, TILESIZE, WHITE, WIDTH, YELLOW
-from sprites import CombatSkeleton, MobType, Player, Skeleton
+
+from sprites import CombatSkeleton, MobType, Player, Skeleton, Creature
 
 class State:
     def __init__(self, game, clock, screen):
@@ -26,9 +28,9 @@ class WorldMapState(State):
         self.map = []
         self.player_turn = True
         self.mobs = []
-        self.new()
+        self.new(game)
 
-    def new(self):
+    def new(self, game):
         self.all_sprites = pg.sprite.Group()
         self.background_layer = pg.sprite.Group()
         self.interactable_layer = pg.sprite.Group()
@@ -39,12 +41,12 @@ class WorldMapState(State):
                        (64, 48), map_generator_type=ProceduralGenerationType.BSP)
         
         player_pos_x, player_pos_y = self.map.get_initial_player_pos()
-        self.player = Player((self.all_sprites, self.player_layer), 
+        self.player = Player(self.game, (self.all_sprites, self.player_layer), 
                              (self.background_layer, self.mob_layer), 
                              player_pos_x, player_pos_y)
         
         mob_positions = self.map.get_mob_positions(1)
-        self.mobs = [Skeleton(self, (self.all_sprites, self.mob_layer), x, y, 30, 1, 10) for x, y in mob_positions]
+        self.mobs = [Skeleton(game, self.map, self.player, (self.all_sprites, self.mob_layer), x, y) for x, y in mob_positions]
 
         self.viewport = Viewport(self.map.tile_width, self.map.tile_height)
   
@@ -54,7 +56,7 @@ class WorldMapState(State):
             self.events()
             self.update()
             self.draw()
-
+    
     def update(self):
         self.all_sprites.update()
         # put this in mob.update() ?
@@ -115,7 +117,7 @@ class WorldMapState(State):
             pg.draw.line(self.screen, LIGHTGREY, (vertical_line_pos, 0), (vertical_line_pos, HEIGHT))
         for horizontal_line_pos in range(0, HEIGHT, TILESIZE):
             pg.draw.line(self.screen, LIGHTGREY, (0, horizontal_line_pos), (WIDTH, horizontal_line_pos))
-
+    
     def events(self):
         for event in pg.event.get():
             if event.type == pg.QUIT:
@@ -127,11 +129,6 @@ class WorldMapState(State):
 
                 if event.key == pg.K_SPACE:
                     self.player_turn = False
-
-                if event.key == pg.K_c:
-                    print('pressed c')
-                    self.game.change_state(GameState.Combat, MobType.Skeleton)
-                    self.game.run()
                 
                 #when player does an action, switch the turn
                 if event.key in [pg.K_LEFT, pg.K_RIGHT, pg.K_UP, pg.K_DOWN] and self.player_turn and self.player.alive:
@@ -140,15 +137,16 @@ class WorldMapState(State):
 
        
 class CombatState(State):
-    def __init__(self, game, clock, screen, monster_type: MobType):
+    def __init__(self, game, clock, screen, map_mob: Creature, player_first: bool):
         super().__init__(game, clock, screen)
         self.font = pg.font.Font(None, 36)
-        self.player_turn = True
+        self.player_turn = player_first
+        self.map_mob = map_mob
         self.new()
 
         self.player = self.game.player.get_combat_sprite((self.all_sprites))
 
-        self.generate_encounter(monster_type)
+        self.generate_encounter(map_mob.mob_type)
 
         self.selected_action = None
         self.actions = [
@@ -163,7 +161,7 @@ class CombatState(State):
         if mob_type == MobType.Skeleton:
             CombatSkeleton((self.all_sprites, self.mobs_group), self.player, mob_centre)
         else:
-            raise NotImplementedError(f'generation of {mob_type} not implemented yet!')
+            raise NotImplementedError(f'[generate_mob] generation of {mob_type} not implemented yet!')
     
     def generate_encounter(self, mob_type: MobType):
         num_of_enemies = random.randint(1, 4)
@@ -217,10 +215,6 @@ class CombatState(State):
             if event.type == pg.KEYDOWN:
                 if event.key == pg.K_ESCAPE:
                     self.quit()
-
-                if event.key == pg.K_c:
-                    self.game.change_state(GameState.Map)
-                    self.game.run()
                                
     def update_action_hover(self, mouse_pos):
         for action in self.actions:
@@ -262,9 +256,10 @@ class CombatState(State):
         self.player_turn=False
     
     def execute_escape(self):
-        print('Escapeing')
+        print('Escapeing...')
+        self.exit_combat()
         self.player_turn=False
-        
+
     ### drawing
     def draw(self):
         pg.display.set_caption("{:.2f}".format(self.clock.get_fps()))
@@ -337,7 +332,14 @@ class CombatState(State):
                     self.screen.blit(text, (self.target_selection_box.x + 10, self.target_selection_box.y + 10 + idx * 40))
                 
     ###
+    def exit_combat(self):
+        self.game.enter_world_map()
+    
     def update(self):
+        if len(self.mobs_group) == 0:
+            self.map_mob.kill()
+            self.exit_combat()
+
         if not self.player_turn:
             for enemy in self.mobs_group:
                 enemy.tickers_update()
@@ -350,9 +352,3 @@ class MenuState:
     pass
 class HubState:
     pass
-
-class GameState(Enum):
-    Menu = MenuState
-    Hub = HubState
-    Map = WorldMapState
-    Combat = CombatState
