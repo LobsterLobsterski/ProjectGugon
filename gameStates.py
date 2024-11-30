@@ -131,7 +131,7 @@ class WorldMapState(State):
                     self.player_turn = False
                 
                 #when player does an action, switch the turn
-                if event.key in [pg.K_LEFT, pg.K_RIGHT, pg.K_UP, pg.K_DOWN] and self.player_turn and self.player.alive:
+                if event.key in [pg.K_LEFT, pg.K_RIGHT, pg.K_UP, pg.K_DOWN] and self.player_turn and self.player.is_alive:
                     self.player_turn = False
                     self.player.move(event.key)
 
@@ -313,24 +313,40 @@ class CombatState(State):
         self.screen.blit(target_text, (self.target_selection_box.x + 10, self.target_selection_box.y - 30))
 
     def draw_targets(self):
-            ### drawing targets in taget box
-            if self.selected_action == "Attack":
-                for idx, enemy in enumerate(self.mobs_group):
-                    if enemy.hovered:
-                        text_color = (255, 0, 0)
-                        background_color = (255, 220, 220)
-                        background_rect = pg.Rect(
-                            self.target_selection_box.x + 5,
-                            self.target_selection_box.y + 5 + idx * 40,
-                            self.target_selection_box.width - 10,
-                            40
-                        )
-                        pg.draw.rect(self.screen, background_color, background_rect)
-                    else:
-                        text_color = WHITE
+        ### drawing targets in taget box
+        if self.selected_action == "Attack":
+            for idx, enemy in enumerate(self.mobs_group):
+                if enemy.hovered:
+                    text_color = (255, 0, 0)
+                    background_color = (255, 220, 220)
+                    background_rect = pg.Rect(
+                        self.target_selection_box.x + 5,
+                        self.target_selection_box.y + 5 + idx * 40,
+                        self.target_selection_box.width - 10,
+                        40
+                    )
+                    pg.draw.rect(self.screen, background_color, background_rect)
+                else:
+                    text_color = WHITE
 
-                    text = self.font.render(enemy.name, True, text_color)
-                    self.screen.blit(text, (self.target_selection_box.x + 10, self.target_selection_box.y + 10 + idx * 40))
+                text = self.font.render(enemy.name, True, text_color)
+                self.screen.blit(text, (self.target_selection_box.x + 10, self.target_selection_box.y + 10 + idx * 40))
+
+        elif self.selected_action in [None, "Defence"]:
+            # Draw player info in the target box
+            player_box = pg.Rect(
+                self.target_selection_box.x + 10,
+                self.target_selection_box.y + 10,
+                self.target_selection_box.width - 20,
+                50
+            )
+            pg.draw.rect(self.screen, (100, 100, 150), player_box)  # Blue-gray color for player box
+
+            # Draw player's health inside the box
+            health_text = self.font.render(f"Player Health: {self.player.health}/{self.player.max_health}", True, WHITE)
+            health_text_rect = health_text.get_rect(center=player_box.center)
+            self.screen.blit(health_text, health_text_rect)
+
 
     def draw_status_effect_boxes(self):
         # Helper method to draw status effects for a creature
@@ -377,6 +393,10 @@ class CombatState(State):
             self.map_mob.kill()
             self.exit_combat()
 
+        if not self.player.is_alive:
+            self.player.kill()
+            self.exit_combat()
+
         if not self.player_turn:
             print('player se:', self.player.status_effects)
             for enemy in self.mobs_group:
@@ -385,6 +405,7 @@ class CombatState(State):
 
             self.player.tickers_update()
             self.player_turn = True
+            self.selected_action = None
 
 class MenuState:
     pass

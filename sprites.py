@@ -112,7 +112,7 @@ class Creature(GameObject):
         self.armour = armour  #damage resistance
         self.status_effects = []
 
-        self.alive = True
+        self.is_alive = True
 
     def receive_damage(self, damage: int):
         print(self.id, 'received', max(0, damage - self.armour), 'damage!')
@@ -122,10 +122,7 @@ class Creature(GameObject):
             self.die()
     
     def die(self):
-        self.alive = False
-        # this removes the sprite from sprite
-        # groups and thus stops it from being
-        # drawn
+        self.is_alive = False
         self.kill()
         # self.spawn_corpse()
             
@@ -135,7 +132,7 @@ class Creature(GameObject):
             if not s.is_ticking():
                 print('[tickers_update] removing', s)
                 self.status_effects.remove(s)
-                s.remove_effects()
+                s.remove_effect()
 
 
 class Player(Creature):
@@ -154,7 +151,7 @@ class Player(Creature):
 
     def get_combat_sprite(self, groups: tuple[pg.sprite.Group]):
         self.skills = ['skill1', 'skill2']
-        return CombatPlayer(groups, self.health, self.damage, self.attack, self.defence, self.armour, self.skills)
+        return CombatPlayer(self, groups, self.health, self.damage, self.attack, self.defence, self.armour, self.skills)
      
     def move(self, key: pg.event):
         dx, dy = 0, 0
@@ -199,7 +196,6 @@ class Player(Creature):
         print('engaging', mob)
         self.game.initiate_combat(mob, True)
         
-    
     def update(self):
         self.rect.x = self.x_pos * TILESIZE
         self.rect.y = self.y_pos * TILESIZE
@@ -214,13 +210,14 @@ class Player(Creature):
         
 
 class CombatPlayer(Creature):
-    def __init__(self, groups, health: int, damage: int, attack:int, defence: int, armour: int, skills: list):
+    def __init__(self, map_player, groups, health: int, damage: int, attack:int, defence: int, armour: int, skills: list):
         self.spritesheet = Spritesheet(MobType.Player)
         super().__init__(groups, self.spritesheet.get_sprite(5, 7), 
                          0, 0, health, damage, attack, defence, armour)
         
         self.rect = pg.Rect(50, 400, 100, 50)
         self.skills = skills
+        self.map_player = map_player
         
     def attack_action(self, target: Creature):
         print('player attacked', target.name)
@@ -231,9 +228,14 @@ class CombatPlayer(Creature):
 
     def defend_action(self):
         print('player defended')
+        StatusEffect("Defence", self, ('defence', 10), 1)
 
     def skill_action(self, selected):
         print('player skilled!', selected)
+
+    def kill(self):
+        self.map_player.die()
+    
 
 
 class MapMob(GameObject):
@@ -296,7 +298,7 @@ class MapMob(GameObject):
     def detect_player(self) -> bool:
         #temp, for now mobs have global awareness
         #of player as long as they're alive
-        return self.player.alive
+        return self.player.is_alive
     
     def in_engage_range(self) -> bool:
         ### needs to be here otherwise the mob doesn't refind path after attacking
@@ -321,8 +323,8 @@ class MapMob(GameObject):
         self.last_known_player_pos = self.player.get_position()
 
     def update_path(self, goal: tuple[int, int]):
-        if ( self.player.alive and self.player_has_moved() ) \
-                or not self.player.alive \
+        if ( self.player.is_alive and self.player_has_moved() ) \
+                or not self.player.is_alive \
                 or not self.path:
             
             self.update_last_known_player_pos()
@@ -428,8 +430,11 @@ class CombatSkeleton(Creature):
     ### actions 
     def attack_action(self):
         print('skeleton attacked', self.target)
+        self.target.receive_damage(self.damage)
+
     def defend_action(self):
         print('skeleton defended')
+        StatusEffect("Defence", self, ('defence', 10), 1)
     
     def distract(self):
         StatusEffect('Distracted', self.target, ('defence', -10), 1)
