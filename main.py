@@ -27,7 +27,7 @@ class Game:
 
     def enter_world_map(self):
         self.current_state = self.map_state
-        self.tun()
+        self.run()
 
 if __name__ == '__main__':
     g = Game()

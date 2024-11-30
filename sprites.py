@@ -135,6 +135,7 @@ class Creature(GameObject):
             if not s.is_ticking():
                 print('[tickers_update] removing', s)
                 self.status_effects.remove(s)
+                s.remove_effects()
 
 
 class Player(Creature):
@@ -431,15 +432,15 @@ class CombatSkeleton(Creature):
         print('skeleton defended')
     
     def distract(self):
-        self.target.status_effects.append(StatusEffect('Distracted', 'lower def', 1))
+        StatusEffect('Distracted', self.target, ('defence', -10), 1)
     
     def rampage(self):
         print('rampage: attacking multiple times with lowered attack and defence', self.target)
-        self.status_effects.append(StatusEffect('Out of Position', 'significantly lower def', 3))
+        StatusEffect('Out of Position', self, ('defence', -20), 3)
         self.attack-=15
         for _ in range(3):
             self.attack_action()
-        self.attack+=15    
+        self.attack+=15
     ###
 
     def tickers_update(self):

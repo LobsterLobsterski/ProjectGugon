@@ -271,6 +271,7 @@ class CombatState(State):
         self.draw_taget_box()
         self.draw_targets()
         self.draw_turn_depictor()
+        self.draw_status_effect_boxes()
 
         pg.display.flip()
 
@@ -330,7 +331,43 @@ class CombatState(State):
 
                     text = self.font.render(enemy.name, True, text_color)
                     self.screen.blit(text, (self.target_selection_box.x + 10, self.target_selection_box.y + 10 + idx * 40))
-                
+
+    def draw_status_effect_boxes(self):
+        # Helper method to draw status effects for a creature
+        def draw_effects(creature):
+            if not creature.status_effects:
+                return
+            
+            max_effects = 5  # Limit the number of displayed effects if necessary
+            line_height = 20  # Height for each line of text
+
+            for idx, status in enumerate(creature.status_effects[:max_effects]):
+                # Position each effect line above the sprite, one above the other
+                effect_top = creature.rect.top - 20 - (idx * line_height)
+                effect_left = creature.rect.centerx - 50  # Adjust as necessary for width
+                effect_width = 100
+                effect_height = line_height
+
+                # Draw background for the individual effect
+                pg.draw.rect(self.screen, (50, 50, 50), (effect_left, effect_top, effect_width, effect_height))
+
+                # Render the text for the status effect
+                effect_text = f"{status.name} ({status.timer})"
+                text_surface = pg.font.Font(None, 18).render(effect_text, True, (255, 255, 255))
+
+                # Draw the text centered in the box
+                text_rect = text_surface.get_rect(center=(effect_left + effect_width // 2, effect_top + effect_height // 2))
+                self.screen.blit(text_surface, text_rect)
+
+        # Draw status effects for the player
+        draw_effects(self.player)
+
+
+        # Draw status effects for each enemy
+        for mob in self.mobs_group:
+            draw_effects(mob)
+
+
     ###
     def exit_combat(self):
         self.game.enter_world_map()
@@ -341,6 +378,7 @@ class CombatState(State):
             self.exit_combat()
 
         if not self.player_turn:
+            print('player se:', self.player.status_effects)
             for enemy in self.mobs_group:
                 enemy.tickers_update()
                 enemy.fight()

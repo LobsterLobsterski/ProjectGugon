@@ -25,14 +25,34 @@ class Skill(Ticker):
 
 
 class StatusEffect(Ticker):
-    def __init__(self, name, effect: callable, duration):
+    def __init__(self, name, target, effect: tuple[str, int], duration):
         super().__init__(duration)
+        self.target = target
         self.name = name
         self.effect = effect
-        self.apply()
+        self.apply_effect()
     
-    def apply(self):
-        print('[StatusEffect] applying', self.effect)
+    
+    def apply_effect(self):
+        self.target.status_effects.append(self)
+        print('[StatusEffect] applying', self.effect, 'to', self.target)
+
+        effect_stat, stat_change = self.effect
+        if effect_stat == 'defence':
+            self.target.defence += stat_change
+        else:
+            raise NotImplementedError(f"[apply_effect] {effect_stat} not implemented")
+
+    def remove_effect(self):
+        effect_stat, stat_change = self.effect
+
+        if effect_stat == 'defence':
+            self.target.defence -= stat_change
+        else:
+            raise NotImplementedError(f"[remove_effect] {effect_stat} not implemented")
+
+    def update(self):
+        super().update()
 
     def  __eq__(self, value: str) -> bool:
         return self.name == value
