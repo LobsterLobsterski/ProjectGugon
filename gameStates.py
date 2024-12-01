@@ -1,6 +1,7 @@
 from enum import Enum
 import random
 import sys
+import time
 import pygame as pg
 
 from GameState import GameState
@@ -143,6 +144,7 @@ class CombatState(State):
         self.player_turn = player_first
         self.map_mob = map_mob
         self.new()
+        self.end_screen_timer = None
 
          
         self.game.player.assign_combat_sprite((self.all_sprites))
@@ -168,7 +170,7 @@ class CombatState(State):
             raise NotImplementedError(f'[generate_mob] generation of {mob_type} not implemented yet!')
     
     def generate_encounter(self, mob_type: MobType):
-        num_of_enemies = random.randint(1, 4)
+        num_of_enemies = 1#random.randint(1, 4)
         screen_width_per_enemy = WIDTH//num_of_enemies
         enemy_width = 150
         for idx in range(num_of_enemies):
@@ -324,6 +326,11 @@ class CombatState(State):
         self.draw_targets()
         self.draw_turn_depictor()
         self.draw_status_effect_boxes()
+        if self.end_screen_timer is not None:
+            if self.player.is_alive:
+                self.draw_victory_message()
+            else:
+                self.draw_defeat_message()
 
         pg.display.flip()
 
@@ -456,21 +463,36 @@ class CombatState(State):
         for mob in self.mobs_group:
             draw_effects(mob)
 
+    def draw_defeat_message(self):
+        text = pg.font.Font(None, 70).render('Defeat...', True, (255, 87, 51))
+        self.screen.blit(text, (WIDTH//2, HEIGHT//2))
+        
+    def draw_victory_message(self):
+        text = pg.font.Font(None, 70).render('Victory!', True, (255, 223, 0))
+        self.screen.blit(text, (WIDTH//3+text.get_rect().width//2, HEIGHT//4))
+    
     ###
     def exit_combat(self):
         self.game.enter_world_map()
     
     def update(self):
         if len(self.mobs_group) == 0:
-            self.map_mob.kill()
-            self.exit_combat()
+            if self.end_screen_timer is None:
+                self.end_screen_timer = pg.time.get_ticks()
 
-        if not self.player.is_alive:
-            self.player.kill()
-            self.exit_combat()
+            elif pg.time.get_ticks() - self.end_screen_timer > 2000:
+                self.map_mob.kill()
+                self.exit_combat()
+
+        elif not self.player.is_alive:
+            if self.end_screen_timer is None:
+                self.end_screen_timer = pg.time.get_ticks()
+
+            elif pg.time.get_ticks() - self.end_screen_timer > 2000:
+                self.player.kill()
+                self.exit_combat()
 
         if not self.player_turn:
-            print('player se:', self.player.status_effects)
             for enemy in self.mobs_group:
                 enemy.tickers_update()
                 enemy.fight()
