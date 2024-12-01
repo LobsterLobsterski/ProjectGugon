@@ -1,12 +1,11 @@
 import random
-from typing import Any, Callable, Dict, Iterable
+from typing import Callable, Dict, Iterable
 import pygame as pg
 from enum import Enum
 
 from AI.BehaviourTree import BehaviourTree
-from GameState import GameState
 from Pathfinding import Pathfinder
-from settings import GREEN, GRIDHEIGHT, GRIDWIDTH, TILESIZE
+from settings import GREEN, GRIDHEIGHT, GRIDWIDTH, RED, TILESIZE
 from tickers import Skill, StatusEffect
 from utils import get_squared_distance
 
@@ -100,6 +99,7 @@ class GameObject(pg.sprite.Sprite):
     def init_behaviour(self, behaviour_tree: Dict[Callable, Callable]) -> BehaviourTree:
         return BehaviourTree(self, behaviour_tree)
 
+
 class Creature(GameObject):
     def __init__(self, groups: Iterable, image: pg.Surface, x: int, y: int, health: int, damage: int, attack: int, defence: int, armour: int):
         super().__init__(groups, image, x, y)
@@ -155,6 +155,23 @@ class Player(Creature):
     def assign_combat_sprite(self, groups: tuple[pg.sprite.Group]):
         self.combat_player = CombatPlayer(self, groups, self.health, self.damage, self.attack, self.defence, self.armour, self.skills)
  
+    def interact(self, interactable_layer: pg.sprite.Group):
+        interactable_pos_x, interactable_pos_y = self.x_pos, self.y_pos
+        if self.direction == Direction.LEFT:
+            interactable_pos_x-=1
+        elif self.direction == Direction.RIGHT:
+            interactable_pos_x+=1
+        elif self.direction == Direction.UP:
+            interactable_pos_y-=1
+        else:
+            interactable_pos_y+=1
+        
+        for object in interactable_layer:
+            if object.x_pos == interactable_pos_x and object.y_pos == interactable_pos_y or object.x_pos == self.x_pos and object.y_pos == self.y_pos:
+                object.interact()
+                return
+
+    
     def move(self, key: pg.event):
         dx, dy = 0, 0
         if key == pg.K_LEFT:
@@ -248,7 +265,6 @@ class CombatPlayer(Creature):
         for s in self.skills:
             s.update()
     
-
 
 class MapMob(GameObject):
     def __init__(self, game, map, player, groups: Iterable, init_x_pos: int, init_y_pos: int, mob_type: MobType):
@@ -484,3 +500,21 @@ class Wall(GameObject):
         self.image.fill(GREEN)
         self.rect.x = x_pos * TILESIZE
         self.rect.y = y_pos * TILESIZE
+
+class MapExit(GameObject):
+    def __init__(self, game, sprite_groups: Iterable, x_pos: int, y_pos: int):
+        super().__init__(sprite_groups, 
+                            pg.Surface((TILESIZE, TILESIZE)),
+                            x_pos,
+                            y_pos
+                            )
+
+        self.image.fill(RED)
+        self.rect.x = x_pos * TILESIZE
+        self.rect.y = y_pos * TILESIZE
+        self.game = game
+    
+    def interact(self):
+        print('exit interacted with!')
+        self.game.enter_new_level()
+

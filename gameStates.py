@@ -9,7 +9,7 @@ from map import Map, Viewport
 from proceduralGeneration import ProceduralGenerationType
 from settings import BGCOLOR, BLACK, DARK_GRAY, FPS, GRAY, GREEN, HEIGHT, LIGHTGREY, RED, TILESIZE, WHITE, WIDTH, YELLOW
 
-from sprites import CombatSkeleton, MobType, Player, Skeleton, Creature
+from sprites import CombatSkeleton, MapExit, MobType, Player, Skeleton, Creature
 
 class State:
     def __init__(self, game, clock, screen):
@@ -46,9 +46,12 @@ class WorldMapState(State):
                              (self.background_layer, self.mob_layer), 
                              player_pos_x, player_pos_y)
         
+        self.map.assign_map_exit((player_pos_x, player_pos_y))
+        MapExit(game, (self.all_sprites, self.interactable_layer), self.map.exit[0], self.map.exit[1])
+        
         mob_positions = self.map.get_mob_positions(1)
         self.mobs = [Skeleton(game, self.map, self.player, (self.all_sprites, self.mob_layer), x, y) for x, y in mob_positions]
-
+        
         self.viewport = Viewport(self.map.tile_width, self.map.tile_height)
   
     def run(self):
@@ -118,7 +121,7 @@ class WorldMapState(State):
             pg.draw.line(self.screen, LIGHTGREY, (vertical_line_pos, 0), (vertical_line_pos, HEIGHT))
         for horizontal_line_pos in range(0, HEIGHT, TILESIZE):
             pg.draw.line(self.screen, LIGHTGREY, (0, horizontal_line_pos), (WIDTH, horizontal_line_pos))
-    
+     
     def events(self):
         for event in pg.event.get():
             if event.type == pg.QUIT:
@@ -132,9 +135,13 @@ class WorldMapState(State):
                     self.player_turn = False
                 
                 #when player does an action, switch the turn
-                if event.key in [pg.K_LEFT, pg.K_RIGHT, pg.K_UP, pg.K_DOWN] and self.player_turn and self.player.is_alive:
-                    self.player_turn = False
-                    self.player.move(event.key)
+                if self.player_turn and self.player.is_alive:
+                    if event.key in [pg.K_LEFT, pg.K_RIGHT, pg.K_UP, pg.K_DOWN]:
+                        self.player_turn = False
+                        self.player.move(event.key)
+
+                    elif event.key == pg.K_e:
+                        self.player.interact(self.interactable_layer)
 
        
 class CombatState(State):
@@ -146,7 +153,6 @@ class CombatState(State):
         self.new()
         self.end_screen_timer = None
 
-         
         self.game.player.assign_combat_sprite((self.all_sprites))
         self.player = self.game.player.combat_player
 

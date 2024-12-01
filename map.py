@@ -1,12 +1,8 @@
-from enum import IntEnum
-from itertools import tee
 import random
-import sys
-from typing import Iterable
 from pygame import Rect, sprite
 from settings import HEIGHT, WIDTH
-from sprites import Wall
 from proceduralGeneration import ProceduralGenerationType, TileType, Room
+from Pathfinding import Pathfinder
 
 
 class Map:
@@ -17,19 +13,30 @@ class Map:
         self.map = []
         self.generator = map_generator_type.value
         self.generate_map()
+        self.exit = ...
 
     def generate_map(self):
         self.map, self.rooms = self.generator.create_map(self.tile_width, self.tile_height, self.sprite_groups)
 
+    def assign_map_exit(self, player_pos: tuple[int, int]):
+        potential_exit = self._get_random_floor()
+        p = Pathfinder(self)
+        while not p.find_path(player_pos, potential_exit):
+            potential_exit = self._get_random_floor()
+
+        self.exit = potential_exit
+
+    
     def check_if_pos_is_floor(self, pos: tuple[int, int]) -> bool:
         # print('floor type:', self.map[pos[0]][pos[1]], self.map[pos[0]][pos[1]] == TileType.Floor)
         return self.map[pos[0]][pos[1]] == TileType.Floor
-   
+    
     def _get_random_floor(self) -> tuple[int, int]:
             y = random.randint(0, self.tile_height-1)
             row = self.map[y]
+            available_tiles = [(x, y) for x, tile in enumerate(row) if tile == TileType.Floor]
 
-            return random.choice([(x, y) for x, tile in enumerate(row) if tile == TileType.Floor])
+            return random.choice(available_tiles) if len(available_tiles)>0 else self._get_random_floor()
 
     def get_initial_player_pos(self) -> tuple[int, int]:
         return self._get_random_floor()

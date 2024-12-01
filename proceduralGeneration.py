@@ -14,6 +14,7 @@ class TileType(IntEnum):
     Floor = 1
     Player = 2
     Mob = 3
+    Map_Exit = 4
 
 
 class Room:

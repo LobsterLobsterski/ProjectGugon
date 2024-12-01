@@ -17,7 +17,7 @@ class Game:
         self.player = self.map_state.player
 
         self.current_state = self.map_state
-
+ 
     def run(self):
         self.current_state.run()
 
@@ -28,6 +28,10 @@ class Game:
     def enter_world_map(self):
         self.current_state = self.map_state
         self.run()
+
+    def enter_new_level(self):
+        self.map_state = WorldMapState(self, self.clock, self.screen)
+        self.enter_world_map()
 
 if __name__ == '__main__':
     g = Game()
