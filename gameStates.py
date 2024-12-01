@@ -62,6 +62,8 @@ class WorldMapState(State):
             self.draw()
     
     def update(self):
+        self.player.tickers_update()
+
         self.all_sprites.update()
         # put this in mob.update() ?
         if not self.player_turn:

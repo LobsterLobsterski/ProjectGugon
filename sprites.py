@@ -226,9 +226,14 @@ class Player(Creature):
             self.image = self.spritesheet.image_at((5, 7))
         elif self.direction == Direction.DOWN:
             self.image = self.spritesheet.image_at((5, 5))
-        
+
+    def tickers_update(self):
+        super().tickers_update()
+        for s in self.skills:
+            s.update()   
 
 class CombatPlayer(Creature):
+    # should probably inherit from Player and then rewrite code so that CombatPlayer receives damage into Player+
     def __init__(self, map_player: Player, groups, health: int, damage: int, attack:int, defence: int, armour: int, skills: list):
         self.spritesheet = Spritesheet(MobType.Player)
         super().__init__(groups, self.spritesheet.get_sprite(5, 7), 
