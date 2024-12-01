@@ -1,6 +1,7 @@
 # define some colors (R, G, B)
 WHITE = (255, 255, 255)
 GRAY = (200, 200, 200)
+DARK_GRAY = (80, 80, 80)
 
 BLACK = (0, 0, 0)
 DARKGREY = (40, 40, 40)

@@ -6,7 +6,7 @@ import pygame as pg
 from GameState import GameState
 from map import Map, Viewport
 from proceduralGeneration import ProceduralGenerationType
-from settings import BGCOLOR, BLACK, FPS, GRAY, HEIGHT, LIGHTGREY, TILESIZE, WHITE, WIDTH, YELLOW
+from settings import BGCOLOR, BLACK, DARK_GRAY, FPS, GRAY, GREEN, HEIGHT, LIGHTGREY, RED, TILESIZE, WHITE, WIDTH, YELLOW
 
 from sprites import CombatSkeleton, MobType, Player, Skeleton, Creature
 
@@ -37,8 +37,8 @@ class WorldMapState(State):
         self.player_layer = pg.sprite.Group()
         self.mob_layer = pg.sprite.Group()
 
-        self.map = Map((self.all_sprites, self.background_layer), 
-                       (64, 48), map_generator_type=ProceduralGenerationType.BSP)
+        self.map = Map((self.all_sprites, self.background_layer),
+                       (64, 48), map_generator_type=ProceduralGenerationType.CA)
         
         player_pos_x, player_pos_y = self.map.get_initial_player_pos()
         self.player = Player(self.game, (self.all_sprites, self.player_layer), 
@@ -144,10 +144,13 @@ class CombatState(State):
         self.map_mob = map_mob
         self.new()
 
-        self.player = self.game.player.get_combat_sprite((self.all_sprites))
+         
+        self.game.player.assign_combat_sprite((self.all_sprites))
+        self.player = self.game.player.combat_player
 
         self.generate_encounter(map_mob.mob_type)
 
+        self.selected_skill = None
         self.selected_action = None
         self.actions = [
             {"name": "Attack", "rect": pg.Rect(50, HEIGHT-250, 150, 40), "hovered": False},
@@ -155,6 +158,7 @@ class CombatState(State):
             {"name": "Skill", "rect": pg.Rect(50, HEIGHT-150, 150, 40), "hovered": False},
             {"name": "Escape", "rect": pg.Rect(50, HEIGHT-100, 150, 40), "hovered": False}
         ]
+
         self.target_selection_box = pg.Rect(250, HEIGHT-260, WIDTH-250-50, 200)
 
     def generate_mob(self, mob_type: MobType, mob_centre: tuple[int, int]):
@@ -190,8 +194,7 @@ class CombatState(State):
         mouse_pos = pg.mouse.get_pos()
 
         self.update_action_hover(mouse_pos)
-        if self.selected_action == 'Attack':
-            self.update_target_hover(mouse_pos)
+        self.update_target_hover(mouse_pos)
             
         for event in pg.event.get():
             if event.type == pg.QUIT:
@@ -221,19 +224,43 @@ class CombatState(State):
             action["hovered"] = action["rect"].collidepoint(mouse_pos)
     
     def update_target_hover(self, mouse_pos):
-        for idx, enemy in enumerate(self.mobs_group):
-            target_name_rect = pg.Rect(
-                self.target_selection_box.x + 10,
-                self.target_selection_box.y + 10 + idx * 40,
-                self.target_selection_box.width - 20,
-                30
-            )
-            enemy.hovered = enemy.rect.collidepoint(mouse_pos) or target_name_rect.collidepoint(mouse_pos)
+        if self.selected_action == "Attack":
+            for idx, enemy in enumerate(self.mobs_group):
+                target_name_rect = pg.Rect(
+                    self.target_selection_box.x + 10,
+                    self.target_selection_box.y + 10 + idx * 40,
+                    self.target_selection_box.width - 20,
+                    30
+                )
+                enemy.hovered = enemy.rect.collidepoint(mouse_pos) or target_name_rect.collidepoint(mouse_pos)
+        
+        elif self.selected_action == "Skill":
+            if self.selected_skill is None:  # hovering over skills
+                for idx, skill in enumerate(self.player.skills):
+                    skill_rect = pg.Rect(
+                        self.target_selection_box.x + 10,
+                        self.target_selection_box.y + 10 + idx * 40,
+                        self.target_selection_box.width - 20,
+                        30
+                    )
+                    skill.hovered = skill_rect.collidepoint(mouse_pos)
+
+            else:  # hovering over targets after a skill is selected
+                for idx, enemy in enumerate(self.mobs_group):
+                    target_name_rect = pg.Rect(
+                        self.target_selection_box.x + 10,
+                        self.target_selection_box.y + 10 + idx * 40,
+                        self.target_selection_box.width - 20,
+                        30
+                    )
+                    enemy.hovered = enemy.rect.collidepoint(mouse_pos) or target_name_rect.collidepoint(mouse_pos)
+
     
     def update_selected_action(self, mouse_pos):
         for action in self.actions:
             if action["rect"].collidepoint(mouse_pos):
                 self.selected_action = action["name"]
+                self.selected_skill = None
     
     def execute_attack(self, mouse_pos):
         for idx, enemy in enumerate(self.mobs_group):
@@ -252,8 +279,33 @@ class CombatState(State):
         self.player_turn=False
 
     def execute_skill(self, mouse_pos):
-        self.player.skill_action(mouse_pos)
-        self.player_turn=False
+        if self.selected_skill is None:
+            for idx, skill in enumerate(self.player.skills):
+                skill_name_rect = pg.Rect(
+                    self.target_selection_box.x + 10,
+                    self.target_selection_box.y + 10 + idx * 40,
+                    self.target_selection_box.width - 20,
+                    30
+                )
+                if skill_name_rect.collidepoint(mouse_pos) and not skill.is_ticking():
+                    self.selected_skill = skill
+                    if skill.target_is_self: 
+                        self.player.skill_action(skill, self.player)
+                        self.selected_skill = None 
+                        self.player_turn = False 
+
+        else:  # select a target for the skill
+            for idx, enemy in enumerate(self.mobs_group):
+                target_name_rect = pg.Rect(
+                    self.target_selection_box.x + 10,
+                    self.target_selection_box.y + 10 + idx * 40,
+                    self.target_selection_box.width - 20,
+                    30
+                )
+                if enemy.rect.collidepoint(mouse_pos) or target_name_rect.collidepoint(mouse_pos):
+                    self.player.skill_action(self.selected_skill, enemy)
+                    self.selected_skill = None
+                    self.player_turn = False
     
     def execute_escape(self):
         print('Escapeing...')
@@ -314,7 +366,7 @@ class CombatState(State):
 
     def draw_targets(self):
         ### drawing targets in taget box
-        if self.selected_action == "Attack":
+        if self.selected_action == "Attack" or (self.selected_skill and not self.selected_skill.target_is_self):
             for idx, enemy in enumerate(self.mobs_group):
                 if enemy.hovered:
                     text_color = (255, 0, 0)
@@ -347,6 +399,27 @@ class CombatState(State):
             health_text_rect = health_text.get_rect(center=player_box.center)
             self.screen.blit(health_text, health_text_rect)
 
+        elif self.selected_action == "Skill" and not self.selected_skill:
+            for idx, skill in enumerate(self.player.skills):
+                if skill.is_ticking():  # Grayed-out if skill is on cooldown
+                    text_color = DARK_GRAY
+
+                elif skill.hovered:
+                    text_color = (255, 0, 0)
+                    background_color = (255, 220, 220)
+                    background_rect = pg.Rect(
+                        self.target_selection_box.x + 5,
+                        self.target_selection_box.y + 5 + idx * 40,
+                        self.target_selection_box.width - 10,
+                        40
+                    )
+                    pg.draw.rect(self.screen, background_color, background_rect)
+                
+                else:
+                    text_color = WHITE
+                    
+                skill_text = self.font.render(f'{skill.name} {f"({skill.timer})" if skill.is_ticking() else ""}', True, text_color)
+                self.screen.blit(skill_text, (self.target_selection_box.x + 10, self.target_selection_box.y + 10 + idx * 40))
 
     def draw_status_effect_boxes(self):
         # Helper method to draw status effects for a creature
@@ -382,7 +455,6 @@ class CombatState(State):
         # Draw status effects for each enemy
         for mob in self.mobs_group:
             draw_effects(mob)
-
 
     ###
     def exit_combat(self):
