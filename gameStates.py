@@ -5,6 +5,7 @@ import time
 import pygame as pg
 
 from GameState import GameState
+from LevelUp import Paladin
 from map import Map, Viewport
 from proceduralGeneration import ProceduralGenerationType
 from settings import BGCOLOR, BLACK, DARK_GRAY, FPS, GRAY, GREEN, HEIGHT, LIGHTGREY, RED, TILESIZE, WHITE, WIDTH, YELLOW
@@ -44,7 +45,8 @@ class WorldMapState(State):
         player_pos_x, player_pos_y = self.map.get_initial_player_pos()
         self.player = Player(self.game, (self.all_sprites, self.player_layer), 
                              (self.background_layer, self.mob_layer), 
-                             player_pos_x, player_pos_y)
+                             player_pos_x, player_pos_y,
+                             Paladin())
         
         self.map.assign_map_exit((player_pos_x, player_pos_y))
         MapExit(game, (self.all_sprites, self.interactable_layer), self.map.exit[0], self.map.exit[1])
@@ -135,6 +137,10 @@ class WorldMapState(State):
 
                 if event.key == pg.K_SPACE:
                     self.player_turn = False
+
+                if event.key == pg.K_l:
+                    self.player.level_up()
+                    exit()
                 
                 #when player does an action, switch the turn
                 if self.player_turn and self.player.is_alive:
@@ -265,7 +271,6 @@ class CombatState(State):
                     )
                     enemy.hovered = enemy.rect.collidepoint(mouse_pos) or target_name_rect.collidepoint(mouse_pos)
 
-    
     def update_selected_action(self, mouse_pos):
         for action in self.actions:
             if action["rect"].collidepoint(mouse_pos):
@@ -410,7 +415,7 @@ class CombatState(State):
             pg.draw.rect(self.screen, (100, 100, 150), player_box)  # Blue-gray color for player box
 
             # Draw player's health inside the box
-            health_text = self.font.render(f"Player Health: {self.player.health}/{self.player.max_health}", True, WHITE)
+            health_text = self.font.render(f"Player Health: {self.player.attributes['health']}/{self.player.attributes['max_health']}", True, WHITE)
             health_text_rect = health_text.get_rect(center=player_box.center)
             self.screen.blit(health_text, health_text_rect)
 

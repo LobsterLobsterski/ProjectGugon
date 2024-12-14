@@ -23,43 +23,29 @@ class Skill(Ticker):
         print(self.name, 'was activated!', self.effect)
         self.effect(target)
         self.timer = self.cooldown
+    
+    def __repr__(self):
+        return f'Skill({self.name})'
 
 
 
 class StatusEffect(Ticker):
-    def __init__(self, name, target, effects: list[tuple[str, int]], duration):
+    def __init__(self, name, effects: list[tuple[str, int]], duration):
         super().__init__(duration)
-        self.target = target
         self.name = name
         self.effects = effects
-        self.apply_effect()
     
-    
-    def apply_effect(self):
-        self.target.status_effects.append(self)
-        print('[StatusEffect] applying', self.effects, 'to', self.target)
+    def apply_effect(self, target):
+        target.status_effects.append(self)
+        print('[StatusEffect] applying', self.effects, 'to', target)
         for effect in self.effects:
             effect_stat, stat_change = effect
-            if effect_stat == 'defence':
-                self.target.defence += stat_change
-            elif effect_stat == 'attack':
-                self.target.attack += stat_change
-            elif effect_stat == 'damage':
-                self.target.damage += stat_change
-            else:
-                raise NotImplementedError(f"[apply_effect] {effect_stat} not implemented")
+            target.attributes[effect_stat] += stat_change
 
-    def remove_effect(self):
+    def remove_effect(self, target):
         for effect in self.effects:
             effect_stat, stat_change = effect
-            if effect_stat == 'defence':
-                self.target.defence -= stat_change
-            elif effect_stat == 'attack':
-                self.target.attack -= stat_change
-            elif effect_stat == 'damage':
-                self.target.damage -= stat_change
-            else:
-                raise NotImplementedError(f"[apply_effect] {effect_stat} not implemented")
+            target.attributes[effect_stat] -= stat_change
 
     def update(self):
         super().update()
@@ -69,3 +55,24 @@ class StatusEffect(Ticker):
     
     def __repr__(self) -> str:
         return f'StatusEffect(name={self.name}, turns_left={self.timer})'
+
+class Distract(Skill):
+    def __init__(self):
+        super().__init__('Distract', False, self.effect, 3)
+
+    def effect(target):
+        s = StatusEffect('Distracted', [('defence', -10)], 1)
+        s.apply_effect(target)
+
+# class Rampage(Skill):
+#     def __init__(self):
+#         super().__init__('Rampage', True, self.effect, 5)
+
+#     def effect(target):
+#         s = StatusEffect('Out of Position', [('defence', -20)], 3)
+#         s.apply_effect(self)
+#         s = StatusEffect('Out of Position', [('attack', -15)], 1)
+#         s.apply_effect(self)
+
+#         for _ in range(3):
+#             self.attack_action(target)
