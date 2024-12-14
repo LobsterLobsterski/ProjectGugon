@@ -19,9 +19,9 @@ class Skill(Ticker):
         self.hovered = False
         self.target_is_self = target_is_self
 
-    def activate(self, target):
+    def activate(self, target, self_target):
         print(self.name, 'was activated!', self.effect)
-        self.effect(target)
+        self.effect(target, self_target)
         self.timer = self.cooldown
     
     def __repr__(self):
@@ -58,21 +58,24 @@ class StatusEffect(Ticker):
 
 class Distract(Skill):
     def __init__(self):
-        super().__init__('Distract', False, self.effect, 3)
+        super().__init__('Distract', False, Distract.effect, 3)
 
-    def effect(target):
+    def effect(target, *args):
+        print('[Distract]:', target, args)
         s = StatusEffect('Distracted', [('defence', -10)], 1)
         s.apply_effect(target)
 
-# class Rampage(Skill):
-#     def __init__(self):
-#         super().__init__('Rampage', True, self.effect, 5)
+class Rampage(Skill):
+    def __init__(self, attack_method: callable):
+        def effect(target, self_target):
+            s = StatusEffect('Out of Position', [('defence', -20)], 3)
+            s.apply_effect(self_target)
+            s = StatusEffect('Out of Position', [('attack', -15)], 1)
+            s.apply_effect(self_target)
 
-#     def effect(target):
-#         s = StatusEffect('Out of Position', [('defence', -20)], 3)
-#         s.apply_effect(self)
-#         s = StatusEffect('Out of Position', [('attack', -15)], 1)
-#         s.apply_effect(self)
+            for _ in range(3):
+                attack_method(target)
 
-#         for _ in range(3):
-#             self.attack_action(target)
+        super().__init__('Rampage', True, effect, 5)
+
+    

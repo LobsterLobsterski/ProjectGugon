@@ -161,7 +161,10 @@ class CombatState(State):
         self.new()
         self.end_screen_timer = None
 
-        self.game.player.assign_combat_sprite((self.all_sprites))
+        print(self.game.player.combat_player)
+
+        if not self.game.player.combat_player:
+            self.game.player.assign_combat_sprite((self.all_sprites))
         self.player = self.game.player.combat_player
 
         self.generate_encounter(map_mob.mob_type)
@@ -184,7 +187,7 @@ class CombatState(State):
             raise NotImplementedError(f'[generate_mob] generation of {mob_type} not implemented yet!')
     
     def generate_encounter(self, mob_type: MobType):
-        num_of_enemies = 1#random.randint(1, 4)
+        num_of_enemies = 2#random.randint(1, 4)
         screen_width_per_enemy = WIDTH//num_of_enemies
         enemy_width = 150
         for idx in range(num_of_enemies):

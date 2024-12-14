@@ -116,9 +116,6 @@ class Creature(GameObject):
         self.class_table = class_table
         self.skills =  []
 
-        if self.class_table.level==0:
-            self.level_up()
-
         self.is_alive = True
 
     def level_up(self):
@@ -134,8 +131,6 @@ class Creature(GameObject):
                 attribute, amount = gain
                 self.attributes[attribute] += amount
         
-
-
     def get_level(self) -> int:
         return self.class_table.level
     
@@ -174,11 +169,12 @@ class Player(Creature):
         self.game = game
         self.collision_layers = collision_layers
         self.direction = Direction.RIGHT
-
-        self.combat_player = ...
+        self.combat_player = None
 
     def assign_combat_sprite(self, groups: tuple[pg.sprite.Group]):
         self.combat_player = CombatPlayer(self.game, groups, self.collision_layers, 0, 0, self.attributes, self.skills, self.class_table)
+        self.class_table.init_attack_method(self.combat_player.attack_action)
+        self.level_up()
  
     def interact(self, interactable_layer: pg.sprite.Group):
         interactable_pos_x, interactable_pos_y = self.x_pos, self.y_pos
@@ -265,15 +261,6 @@ class CombatPlayer(Player):
         self.image = self.spritesheet.get_sprite(5, 7)
         self.skills = skills
         self.attributes = attributes
-
-    # def __init__(self, map_player: Player, groups, health: int, damage: int, attack:int, defence: int, armour: int, skills: list, class_table: ClassTable):
-    #     self.spritesheet = Spritesheet(MobType.Player)
-    #     super().__init__(groups, self.spritesheet.get_sprite(5, 7),
-    #                      0, 0, health, damage, attack, defence, armour,
-    #                      class_table)
-        
-    #     self.rect = pg.Rect(50, 400, 100, 50)
-    #     self.skills = skills
     
     def attack_action(self, target: Creature):
         print('player attacked', target.name)
@@ -289,7 +276,7 @@ class CombatPlayer(Player):
 
     def skill_action(self, selected_skill: Skill, target: Creature):
         print('player skilled!', selected_skill)
-        selected_skill.activate(target)
+        selected_skill.activate(target, self)
 
     def kill(self):
         self.die()
@@ -447,7 +434,7 @@ class CombatSkeleton(Creature):
         self.spritesheet = Spritesheet(MobType.Skeleton)
         self.mobs = groups[1]
         super().__init__(groups, self.spritesheet.get_sprite(random.randint(0, 2), 0), 
-                         0, 0, 30, 10, 20, 30, 5, SkeletonClass())
+                         0, 0, 30, 10, 20, 30, 5, SkeletonClass(self.attack_action))
         
         self.image = pg.transform.scale(self.image, (128, 128))
         self.rect = self.image.get_rect(center=centre)
@@ -455,12 +442,13 @@ class CombatSkeleton(Creature):
         CombatSkeleton.skeleton_counter+=1
         self.name = f"Skeleton {self.skeleton_counter}"
         self.hovered = False
+        self.level_up()
 
         # temp: overwriting creature skills
-        self.skills = [
-            Skill('Distract', False, self.distract, 3),
-            Skill('Rampage', True, self.rampage, 5)
-        ]
+        # self.skills = [
+        #     Skill('Distract', False, self.distract, 3),
+        #     Skill('Rampage', True, self.rampage, 5)
+        # ]
 
         self.player = player
         # for now only target is player
@@ -480,7 +468,7 @@ class CombatSkeleton(Creature):
         print('\n')
         action = self.bahaviour_tree.find_action()
         print('action:', action)
-        action(self.target)
+        action(self.target, self)
     
     ### conditions
     def is_alone(self):
@@ -494,32 +482,32 @@ class CombatSkeleton(Creature):
         return not self.skills[1].is_ticking()
     ###
 
-    ### actions 
-    def attack_action(self, target):
+    ### actions
+    def attack_action(self, target, *args):
         print('skeleton attacked', target)
         if self.attributes['attack']+random.randint(1, 20) > target.attributes['defence']:
             target.receive_damage(self.attributes['damage'])
         else:
             print('Attack on', target, 'missed!')
 
-    def defend_action(self, target):
+    def defend_action(self, target, *args):
         print('skeleton defended')
         s = StatusEffect("Defence", [('defence', 10)], 1)
-        s.apply_effect(self)
+        s.apply_effect(target)
     
-    def distract(self, target):
+    def distract(self, target, *args):
         s = StatusEffect('Distracted', [('defence', -10)], 1)
         s.apply_effect(target)
 
-    def rampage(self, target):
+    def rampage(self, target, self_target):
         print('rampage: attacking multiple times with lowered attack and defence', target)
         s = StatusEffect('Out of Position', [('defence', -20)], 3)
-        s.apply_effect(self)
+        s.apply_effect(self_target)
         s = StatusEffect('Out of Position', [('attack', -15)], 1)
-        s.apply_effect(self)
+        s.apply_effect(self_target)
 
         for _ in range(3):
-            self.attack_action(target)
+            self.attack_action(target, self)
     ###
 
     def tickers_update(self):
