@@ -1,7 +1,7 @@
 import pygame as pg
 
 from GameState import GameState
-from gameStates import CombatState, WorldMapState
+from gameStates import CombatState, LevelUpState, WorldMapState
 from settings import HEIGHT, TITLE, WIDTH
 from sprites import CombatPlayer, Creature, MobType
 
@@ -32,6 +32,11 @@ class Game:
     def enter_new_level(self):
         self.map_state = WorldMapState(self, self.clock, self.screen)
         self.enter_world_map()
+    
+    def enter_level_up_selection(self, choices):
+        state = LevelUpState(self, self.clock, self.screen, choices)
+        selected_choice = state.run()
+        return selected_choice
 
 if __name__ == '__main__':
     g = Game()

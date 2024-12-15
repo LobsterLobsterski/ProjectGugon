@@ -1,4 +1,4 @@
-from tickers import Distract, Rampage, Skill, StatusEffect
+from tickers import Distract, Rampage, Skill, Smite, StatusEffect
 
 
 class ClassTable:
@@ -41,7 +41,12 @@ class Paladin(ClassTable):
             1: [Skill('Bless', True,  lambda target, *args: StatusEffect('Blessed', [('attack', 10), ('damage', 5)], 3).apply_effect(target), 5), 
                 Skill('Triple Slash', False, lambda target, *args: [attack_method(target) for _ in range(3)], 3)
                 ],
-            2: ['Fighting style', 'Smite'],
+            2: [[
+                    StatusEffect('Defencive fighter', [('defence', 1)], -1), 
+                    StatusEffect('Duelist', [('damage', 2)], -1), 
+                    StatusEffect('Great Weapon Fighter', [('attack', 2)], -1)
+                ],
+                Smite(attack_method)],
             3: ['Subclass'],
             4: ['Random card'],
             5: ['Double Attack', ('attack', 1)],

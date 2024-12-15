@@ -6,7 +6,7 @@ from enum import Enum
 from AI.BehaviourTree import BehaviourTree
 from LevelUp import ClassTable, SkeletonClass
 from Pathfinding import Pathfinder
-from settings import GREEN, GRIDHEIGHT, GRIDWIDTH, RED, TILESIZE
+from settings import BLACK, GRAY, GREEN, GRIDHEIGHT, GRIDWIDTH, RED, TILESIZE
 from tickers import Skill, StatusEffect
 from utils import get_squared_distance
 
@@ -102,8 +102,9 @@ class GameObject(pg.sprite.Sprite):
 
 
 class Creature(GameObject):
-    def __init__(self, groups: Iterable, image: pg.Surface, x: int, y: int, health: int, damage: int, attack: int, defence: int, armour: int, class_table: ClassTable):
+    def __init__(self, game, groups: Iterable, image: pg.Surface, x: int, y: int, health: int, damage: int, attack: int, defence: int, armour: int, class_table: ClassTable):
         super().__init__(groups, image, x, y)
+        self.game = game
         self.attributes = {
             'max_health': health,
             'health': health,
@@ -113,6 +114,7 @@ class Creature(GameObject):
             'armour': armour
         }
         self.status_effects = []
+        self.passive_skills = []
         self.class_table = class_table
         self.skills =  []
 
@@ -120,16 +122,17 @@ class Creature(GameObject):
 
     def level_up(self):
         gains = self.class_table.level_up()
+        print('Creature.level_up:', gains)
         for gain in gains:
-            print('gained:', gain)
+            if isinstance(gain, list): 
+                gain = self.game.enter_level_up_selection(gain)
+
             if isinstance(gain, Skill):
                 self.skills.append(gain)
+
             elif isinstance(gain, StatusEffect):
-                self.status_effects.append(gain)
-            else:
-                # attribute increase
-                attribute, amount = gain
-                self.attributes[attribute] += amount
+                self.passive_skills.append(gain)
+                gain.apply_effect(self)
         
     def get_level(self) -> int:
         return self.class_table.level
@@ -159,14 +162,13 @@ class Player(Creature):
     def __init__(self, game, groups: Iterable, collision_layers: tuple, init_x_pos: int, init_y_pos: int, classTable: ClassTable):
         self.spritesheet = Spritesheet(MobType.Player)
 
-        super().__init__(groups, 
+        super().__init__(game, groups, 
                             self.spritesheet.image_at((0, 0)),
                             init_x_pos, init_y_pos,
                             100, 10, 10000, 3000, 1,
                             classTable
                             )
 
-        self.game = game
         self.collision_layers = collision_layers
         self.direction = Direction.RIGHT
         self.combat_player = None
@@ -372,7 +374,7 @@ class MapMob(GameObject):
         self.last_known_player_pos = self.player.get_position()
 
     def update_path(self, goal: tuple[int, int]):
-        if ( self.player.is_alive and self.player_has_moved() ) \
+        if self.player.is_alive and self.player_has_moved() \
                 or not self.player.is_alive \
                 or not self.path:
             
@@ -430,10 +432,10 @@ class Skeleton(MapMob):
 
 class CombatSkeleton(Creature):
     skeleton_counter=0
-    def __init__(self, groups, player: CombatPlayer, centre: tuple[int, int]):
+    def __init__(self, game, groups, player: CombatPlayer, centre: tuple[int, int]):
         self.spritesheet = Spritesheet(MobType.Skeleton)
         self.mobs = groups[1]
-        super().__init__(groups, self.spritesheet.get_sprite(random.randint(0, 2), 0), 
+        super().__init__(game, groups, self.spritesheet.get_sprite(random.randint(0, 2), 0), 
                          0, 0, 30, 10, 20, 30, 5, SkeletonClass(self.attack_action))
         
         self.image = pg.transform.scale(self.image, (128, 128))
@@ -443,12 +445,6 @@ class CombatSkeleton(Creature):
         self.name = f"Skeleton {self.skeleton_counter}"
         self.hovered = False
         self.level_up()
-
-        # temp: overwriting creature skills
-        # self.skills = [
-        #     Skill('Distract', False, self.distract, 3),
-        #     Skill('Rampage', True, self.rampage, 5)
-        # ]
 
         self.player = player
         # for now only target is player

@@ -23,6 +23,68 @@ class State:
         sys.exit()
      
 
+class LevelUpState(State):
+    def __init__(self, game, clock, screen, choices):
+        super().__init__(game, clock, screen)
+        self.choices = choices
+        self.selected_idx = None
+
+    def run(self):
+        while True:
+            choice = self.events()
+            if choice:
+                return choice
+            
+            self.draw()
+            self.clock.tick(FPS)
+
+    def draw(self):
+        self.screen.fill(GRAY)
+        card_width, card_height = 200, 300
+        gap = 30
+        x_start = (WIDTH - ((card_width + gap) * len(self.choices) - gap)) // 2
+        y_start = 150
+
+        for idx, choice in enumerate(self.choices):
+            x = x_start + idx * (card_width + gap)
+            y = y_start
+
+            color = (255, 223, 186) if idx == self.selected_idx else (200, 200, 200)
+            pg.draw.rect(self.screen, color, (x, y, card_width, card_height))
+            pg.draw.rect(self.screen, BLACK, (x, y, card_width, card_height), 2)
+
+            # Render text
+            font = pg.font.Font(None, 24)
+            text_surface = font.render(choice.name, True, BLACK)
+            text_rect = text_surface.get_rect(center=(x + card_width // 2, y + card_height // 2))
+            self.screen.blit(text_surface, text_rect)
+
+        pg.display.flip()
+
+    def events(self):
+        for event in pg.event.get():
+            if event.type == pg.QUIT:
+                pg.quit()
+                sys.exit()
+            elif event.type == pg.MOUSEMOTION:
+                mouse_x, mouse_y = event.pos
+                self.selected_idx = None
+                card_width, card_height = 200, 300
+                gap = 30
+                x_start = (WIDTH - ((card_width + gap) * len(self.choices) - gap)) // 2
+                y_start = 150
+
+                for idx in range(len(self.choices)):
+                    x = x_start + idx * (card_width + gap)
+                    y = y_start
+                    if x <= mouse_x <= x + card_width and y <= mouse_y <= y + card_height:
+                        self.selected_idx = idx
+
+            elif event.type == pg.MOUSEBUTTONDOWN and event.button == 1:
+                if self.selected_idx is not None:
+                    return self.choices[self.selected_idx]
+
+
 class WorldMapState(State):
     def __init__(self, game, clock, screen):
         super().__init__(game, clock, screen)
@@ -140,7 +202,6 @@ class WorldMapState(State):
 
                 if event.key == pg.K_l:
                     self.player.level_up()
-                    exit()
                 
                 #when player does an action, switch the turn
                 if self.player_turn and self.player.is_alive:
@@ -182,7 +243,7 @@ class CombatState(State):
 
     def generate_mob(self, mob_type: MobType, mob_centre: tuple[int, int]):
         if mob_type == MobType.Skeleton:
-            CombatSkeleton((self.all_sprites, self.mobs_group), self.player, mob_centre)
+            CombatSkeleton(self.game, (self.all_sprites, self.mobs_group), self.player, mob_centre)
         else:
             raise NotImplementedError(f'[generate_mob] generation of {mob_type} not implemented yet!')
     
