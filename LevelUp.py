@@ -29,7 +29,11 @@ class ClassTable:
 
     def level_up(self):
         self.level+=1
-        return self.level_features_dict[self.level]
+        if self.level <= max(self.level_features_dict.keys()):
+            return self.level_features_dict[self.level]
+        
+        print('maxed out level')
+        return []
     
 
 class Paladin(ClassTable):
@@ -54,16 +58,23 @@ class Paladin(ClassTable):
             5: ['Double Attack', ('attack', 1)],
             6: ['Aura of Protection'],
             7: ['Subclass feature'],
-            8: ['Random'],
-            9: ['Random', ('attack', 1)],
+            8: [
+                    [skill() if not issubclass(skill, AttackSkill) else skill(attack_method) for skill in get_random_skills(3)]
+               ],
+            9: [[skill() if not issubclass(skill, AttackSkill) else skill(attack_method) for skill in get_random_skills(3)],
+                 ('attack', 1)],
             10: ['Aura of Courage'],
-            11: ['Radiant strikes'],
-            12: ['Random'],
-            13: ['Random', ('attack', 1)],
-            14: ['Nothing'],
+            11: ['Radiant Strikes'],
+            12: [
+                    [skill() if not issubclass(skill, AttackSkill) else skill(attack_method) for skill in get_random_skills(3)]
+               ],
+            13: [[skill() if not issubclass(skill, AttackSkill) else skill(attack_method) for skill in get_random_skills(3)], 
+                 ('attack', 1)],
+            14: [],
             15: ['Heal'],
             16: ['Subclass feature'],
-            17: ['Random', ('attack', 1)],
+            17: [[skill() if not issubclass(skill, AttackSkill) else skill(attack_method) for skill in get_random_skills(3)], 
+                 ('attack', 1)],
             18: ['Aura Master'],
             19: ['Epic Boon'],
             20: ['Subclass Feature']

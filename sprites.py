@@ -133,6 +133,10 @@ class Creature(GameObject):
             elif isinstance(gain, StatusEffect):
                 self.passive_skills.append(gain)
                 gain.apply_effect(self)
+            
+            elif isinstance(gain, tuple):
+                stat, amount = gain
+                self.attributes[stat] += amount
         
     def get_level(self) -> int:
         return self.class_table.level

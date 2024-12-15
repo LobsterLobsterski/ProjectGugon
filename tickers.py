@@ -47,7 +47,7 @@ class StatusEffect(Ticker):
             effect_stat, stat_change = effect
             if isinstance(stat_change, str):
                 dice_number, dice_size = stat_change.split('d')
-                stat_change = sum([random.randint(1, dice_size) for _ in range(dice_number)])
+                stat_change = sum([random.randint(1, int(dice_size)) for _ in range(int(dice_number))])
 
             self.effect_values.append(stat_change)
             target.attributes[effect_stat] += stat_change
