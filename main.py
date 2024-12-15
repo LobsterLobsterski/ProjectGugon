@@ -21,7 +21,7 @@ class Game:
     def run(self):
         self.current_state.run()
 
-    def initiate_combat(self, mob: Creature, player_first: bool):
+    def initiate_combat(self, mob: Creature, player_first: bool): 
         self.current_state = CombatState(self, self.clock, self.screen, mob, player_first)
         self.run()
 

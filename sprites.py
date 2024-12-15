@@ -277,7 +277,7 @@ class CombatPlayer(Player):
         s.apply_effect(self)
 
     def skill_action(self, selected_skill: Skill, target: Creature):
-        print('player skilled!', selected_skill)
+        print('player skilled!', selected_skill, 'target:', target)
         selected_skill.activate(target, self)
 
     def kill(self):

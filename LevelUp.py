@@ -1,4 +1,4 @@
-from tickers import Distract, Rampage, Skill, Smite, StatusEffect
+from tickers import AttackSkill, Bless, Distract, Rampage, Skill, Smite, StatusEffect, TripleSlash, get_random_skills
 
 
 class ClassTable:
@@ -38,17 +38,19 @@ class Paladin(ClassTable):
         
     def init_attack_method(self, attack_method):
         self.level_features_dict = {
-            1: [Skill('Bless', True,  lambda target, *args: StatusEffect('Blessed', [('attack', 10), ('damage', 5)], 3).apply_effect(target), 5), 
-                Skill('Triple Slash', False, lambda target, *args: [attack_method(target) for _ in range(3)], 3)
+            1: [Bless(), 
+                TripleSlash(attack_method)
                 ],
             2: [[
-                    StatusEffect('Defencive fighter', [('defence', 1)], -1), 
+                    StatusEffect('Defensive fighter', [('defence', 1)], -1), 
                     StatusEffect('Duelist', [('damage', 2)], -1), 
                     StatusEffect('Great Weapon Fighter', [('attack', 2)], -1)
                 ],
                 Smite(attack_method)],
-            3: ['Subclass'],
-            4: ['Random card'],
+            4: ['Subclass'],
+            3: [
+                    [skill() if not issubclass(skill, AttackSkill) else skill(attack_method) for skill in get_random_skills(3)]
+               ],
             5: ['Double Attack', ('attack', 1)],
             6: ['Aura of Protection'],
             7: ['Subclass feature'],

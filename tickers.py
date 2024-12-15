@@ -1,6 +1,5 @@
 import random
 
-
 class Ticker:
     def __init__(self, round_timer: int):
         self.timer = round_timer
@@ -11,7 +10,6 @@ class Ticker:
     def update(self):
         if self.is_ticking():
             self.timer-=1
-
 
 class Skill(Ticker):
     def __init__(self, name, target_is_self, effect: callable, cooldown):
@@ -30,6 +28,9 @@ class Skill(Ticker):
     def __repr__(self):
         return f'Skill({self.name})'
 
+class AttackSkill(Skill):
+    def __init__(self, name, target_is_self, effect, cooldown):
+        super().__init__(name, target_is_self, effect, cooldown)
 
 
 class StatusEffect(Ticker):
@@ -66,32 +67,54 @@ class StatusEffect(Ticker):
         return f'StatusEffect(name={self.name}, turns_left={self.timer})'
 
 class Distract(Skill):
-    def __init__(self):
-        super().__init__('Distract', False, Distract.effect, 3)
+    def __init__(self, cooldown=3):
+        super().__init__('Distract', False, Distract.effect, cooldown)
 
     def effect(target, *args):
-        print('[Distract]:', target, args)
-        s = StatusEffect('Distracted', [('defence', -10)], 1)
-        s.apply_effect(target)
+        StatusEffect('Distracted', [('defence', -10)], 0).apply_effect(target)
 
-class Rampage(Skill):
-    def __init__(self, attack_method: callable):
+class Rampage(AttackSkill):
+    def __init__(self, attack_method: callable, cooldown=5):
         def effect(target, self_target):
             StatusEffect('Out of Position', [('defence', -20)], 3).apply_effect(self_target)
-            StatusEffect('Out of Position', [('attack', -15)], 1).apply_effect(self_target)
+            StatusEffect('Out of Position', [('attack', -15)], 0).apply_effect(self_target)
 
             for _ in range(3):
                 attack_method(target)
 
-        super().__init__('Rampage', True, effect, 5)
+        super().__init__('Rampage', False, effect, cooldown)
 
-
-class Smite(Skill):
-    def __init__(self, attack_method: callable):
+class Smite(AttackSkill):
+    def __init__(self, attack_method: callable, cooldown=4):
         def effect(target, self_target):
             StatusEffect('Smite', [('damage', '2d8')], 0).apply_effect(self_target)
             attack_method(target)
 
-        super().__init__('Smite', True, effect, 4)
+        super().__init__('Smite', False, effect, cooldown)
 
-    
+class Bless(Skill):
+    def __init__(self, cooldown=5):
+        super().__init__('Bless', True, Bless.effect, cooldown)
+
+    def effect(target, *args):
+        StatusEffect('Blessed', [('attack', 10), ('damage', 5)], 3).apply_effect(target)
+
+class TripleSlash(AttackSkill):
+    def __init__(self, attack_method: callable, cooldown=3):
+        def effect(target, *args):
+            for _ in range(3):
+                print('TripleSlash target', target, args)
+                attack_method(target)
+
+        super().__init__('Triple Slash', False, effect, cooldown)
+
+
+list_of_all_skills = [Distract, 
+                      Rampage, 
+                      Smite, 
+                      Bless, 
+                      TripleSlash
+                    ]
+
+def get_random_skills(number):
+    return [random.choice(list_of_all_skills) for _ in range(number)]
