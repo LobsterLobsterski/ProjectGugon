@@ -166,6 +166,37 @@ class HolyNimbus(Skill):
         # TEMP: damage needs to be swapped for passive_damage
         StatusEffect('Holy Nimbus', [('defence', 2), ('armour', 2), ('damage', 5)], 10).apply_effect(target)
 
+class BoonOfCombatProwess(Skill):
+    def __init__(self, cooldown=100):
+        super().__init__('Holy Nimbus', True, HolyNimbus.effect, cooldown)
+
+    def effect(target, *args):
+        # TEMP: damage needs to be swapped for passive_damage
+        StatusEffect('Holy Nimbus', [('defence', 2), ('armour', 2), ('damage', 5)], 10).apply_effect(target)
+
+class BoonOfFortitude(Skill):
+    def __init__(self, cooldown=100):
+        super().__init__('Holy Nimbus', True, HolyNimbus.effect, cooldown)
+
+    def effect(target, *args):
+        # TEMP: damage needs to be swapped for passive_damage
+        StatusEffect('Holy Nimbus', [('defence', 2), ('armour', 2), ('damage', 5)], 10).apply_effect(target)
+
+class BoonOfCombatProwess(Skill):
+    def __init__(self, cooldown=100):
+        super().__init__('Holy Nimbus', True, HolyNimbus.effect, cooldown)
+
+    def effect(target, *args):
+        # TEMP: damage needs to be swapped for passive_damage
+        StatusEffect('Holy Nimbus', [('defence', 2), ('armour', 2), ('damage', 5)], 10).apply_effect(target)
+
+class BoonOfCombatProwess(Skill):
+    def __init__(self, cooldown=100):
+        super().__init__('Holy Nimbus', True, HolyNimbus.effect, cooldown)
+
+    def effect(target, *args):
+        # TEMP: damage needs to be swapped for passive_damage
+        StatusEffect('Holy Nimbus', [('defence', 2), ('armour', 2), ('damage', 5)], 10).apply_effect(target)
 list_of_all_skills = [Distract, 
                       Rampage, 
                       Smite, 
@@ -175,6 +206,15 @@ list_of_all_skills = [Distract,
                       Agathys,
                       ShieldOfFaith
                     ]
+
+
+def get_epic_boons():
+    return [
+        StatusEffect('Boon of Fortitude', [('max_health', 40), ('health', 40)], -1),
+        StatusEffect('Boon of Recovery', [('health', 40)], -1), # temp: add regeneration
+        StatusEffect('Boon of Combat Prowess', [('attack', 100)], -1),# temp: only for first attack of turn
+        StatusEffect('Boon of Spell Recall', [('defence', 1)], -1),# temp: one random skill goes off cooldown at the start of the turn
+    ]
 
 def get_random_skills(number):
     return [random.choice(list_of_all_skills) for _ in range(number)]

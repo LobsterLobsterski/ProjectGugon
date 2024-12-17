@@ -1,5 +1,5 @@
 from Dice import Die
-from tickers import Agathys, AttackSkill, Bless, Distract, Heal, HolyNimbus, InvincibleConqueror, Rampage, SacredWeapon, ShieldOfFaith, Skill, Smite, StatusEffect, TripleSlash, get_random_skills
+from tickers import Agathys, AttackSkill, Bless, Distract, Heal, HolyNimbus, InvincibleConqueror, Rampage, SacredWeapon, ShieldOfFaith, Skill, Smite, StatusEffect, TripleSlash, get_epic_boons, get_random_skills
 
 
 class ClassTable:
@@ -113,7 +113,7 @@ class Paladin(ClassTable):
                                  -1)
                 ], # NOTE: buff previous auras <- needs to be tested
             19: [
-                    'Epic Boon'
+                    [get_epic_boons()]
                 ],
             20: [
                     'subclass_levelup'
