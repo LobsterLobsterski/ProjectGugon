@@ -1,9 +1,11 @@
+from __future__ import annotations
 import random
 from typing import Callable, Dict, Iterable
 import pygame as pg
 from enum import Enum
 
 from AI.BehaviourTree import BehaviourTree
+from Dice import DiceGroup, Die
 from LevelUp import ClassTable, SkeletonClass
 from Pathfinding import Pathfinder
 from settings import BLACK, GRAY, GREEN, GRIDHEIGHT, GRIDWIDTH, RED, TILESIZE
@@ -102,14 +104,16 @@ class GameObject(pg.sprite.Sprite):
 
 
 class Creature(GameObject):
-    def __init__(self, game, groups: Iterable, image: pg.Surface, x: int, y: int, health: int, damage: int, attack: int, defence: int, armour: int, class_table: ClassTable):
+    def __init__(self, game, groups: Iterable, image: pg.Surface, x: int, y: int, health: int, damage: int, attack: int, defence: int, armour: int, dice: DiceGroup, class_table: ClassTable):
         super().__init__(groups, image, x, y)
         self.game = game
         self.attributes = {
             'max_health': health,
             'health': health,
             'damage': damage,
+            'damage_dice': dice,
             'attack': attack,
+            'attack_number': 1, # number of attacks made per attack action
             'defence': defence,
             'armour': armour
         }
@@ -148,11 +152,18 @@ class Creature(GameObject):
             print(self.id, 'died!')
             self.die()
     
+    def deal_damage(self, target: Creature):
+        damage = self.attributes['damage_dice'].roll() + self.attributes['damage']
+        target.receive_damage(damage)
+
     def die(self):
         self.is_alive = False
         self.kill()
         # self.spawn_corpse()
             
+    def heal(self, amount: int):
+        self.attributes['health'] += min(self.attributes['health']+amount, self.attributes['max_health'])
+    
     def tickers_update(self):
         for s in self.status_effects:
             s.update()
@@ -169,7 +180,7 @@ class Player(Creature):
         super().__init__(game, groups, 
                             self.spritesheet.image_at((0, 0)),
                             init_x_pos, init_y_pos,
-                            100, 10, 10000, 3000, 1,
+                            100, 10, 10000, 3000, 1, DiceGroup([Die(8)]),
                             classTable
                             )
 
@@ -270,8 +281,8 @@ class CombatPlayer(Player):
     
     def attack_action(self, target: Creature):
         print('player attacked', target.name)
-        if self.attributes['attack']+random.randint(1, 20) > target.attributes['defence']:
-            target.receive_damage(self.attributes['damage'])
+        if random.randint(1, 20)+self.attributes['attack'] >= target.attributes['defence']:
+            self.deal_damage(target)
         else:
             print('Attack on', target, 'missed!')
 
@@ -440,7 +451,7 @@ class CombatSkeleton(Creature):
         self.spritesheet = Spritesheet(MobType.Skeleton)
         self.mobs = groups[1]
         super().__init__(game, groups, self.spritesheet.get_sprite(random.randint(0, 2), 0), 
-                         0, 0, 30, 10, 20, 30, 5, SkeletonClass(self.attack_action))
+                         0, 0, 30, 10, 20, 30, 5, DiceGroup([Die(6)]), SkeletonClass(self.attack_action))
         
         self.image = pg.transform.scale(self.image, (128, 128))
         self.rect = self.image.get_rect(center=centre)

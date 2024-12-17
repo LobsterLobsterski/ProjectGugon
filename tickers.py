@@ -1,4 +1,7 @@
 import random
+from typing import Callable
+
+from Dice import DiceGroup, Die
 
 class Ticker:
     def __init__(self, round_timer: int):
@@ -34,7 +37,7 @@ class AttackSkill(Skill):
 
 
 class StatusEffect(Ticker):
-    def __init__(self, name, effects: list[tuple[str, int]], duration):
+    def __init__(self, name, effects: list[tuple[str, int]] | Callable, duration):
         super().__init__(duration)
         self.name = name
         self.effects = effects
@@ -44,10 +47,13 @@ class StatusEffect(Ticker):
         target.status_effects.append(self)
         print('[StatusEffect] applying', self.effects, 'to', target)
         for effect in self.effects:
+            if isinstance(effect, Callable):
+                effect(target.passive_skills)
+                continue
+
             effect_stat, stat_change = effect
             if isinstance(stat_change, str):
-                dice_number, dice_size = stat_change.split('d')
-                stat_change = sum([random.randint(1, int(dice_size)) for _ in range(int(dice_number))])
+                stat_change = Die(stat_change).roll()
 
             self.effect_values.append(stat_change)
             target.attributes[effect_stat] += stat_change
@@ -108,12 +114,20 @@ class TripleSlash(AttackSkill):
 
         super().__init__('Triple Slash', False, effect, cooldown)
 
+class Heal(Skill):
+    def __init__(self, cooldown=10):
+        super().__init__('Heal', True, Heal.effect, cooldown)
+
+    def effect(target, *args):
+        target.heal(DiceGroup([Die(8), Die(8)]).roll())
+
 
 list_of_all_skills = [Distract, 
                       Rampage, 
                       Smite, 
                       Bless, 
-                      TripleSlash
+                      TripleSlash,
+                      Heal
                     ]
 
 def get_random_skills(number):

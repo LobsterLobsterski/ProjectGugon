@@ -1,4 +1,4 @@
-from tickers import AttackSkill, Bless, Distract, Rampage, Skill, Smite, StatusEffect, TripleSlash, get_random_skills
+from tickers import AttackSkill, Bless, Distract, Heal, Rampage, Skill, Smite, StatusEffect, TripleSlash, get_random_skills
 
 
 class ClassTable:
@@ -41,43 +41,75 @@ class Paladin(ClassTable):
         super().__init__(level)
         
     def init_attack_method(self, attack_method):
+        # NOTE: for later, you can only have one aura active at any one time unless you have aura master which allows
+        # using as many auras as you want
         self.level_features_dict = {
-            1: [Bless(), 
-                TripleSlash(attack_method)
+            1: [
+                    Bless(), 
+                    TripleSlash(attack_method)
                 ],
             2: [[
-                    StatusEffect('Defensive fighter', [('defence', 1)], -1), 
+                    StatusEffect('Defensive Fighter', [('defence', 1)], -1), 
                     StatusEffect('Duelist', [('damage', 2)], -1), 
                     StatusEffect('Great Weapon Fighter', [('attack', 2)], -1)
                 ],
-                Smite(attack_method)],
+                    Smite(attack_method)],
             4: ['Subclass'],
             3: [
                     [skill() if not issubclass(skill, AttackSkill) else skill(attack_method) for skill in get_random_skills(3)]
                ],
-            5: ['Double Attack', ('attack', 1)],
-            6: ['Aura of Protection'],
-            7: ['Subclass feature'],
+            5: [
+                    'Double Attack', 
+                    ('attack', 1)
+                ],
+            6: [
+                    StatusEffect('Aura of Protection', [('armour', 2)], -1)
+                ],
+            7: [
+                    'Subclass feature'
+                ],
             8: [
-                    [skill() if not issubclass(skill, AttackSkill) else skill(attack_method) for skill in get_random_skills(3)]
+                    [skill() if not issubclass(skill, AttackSkill) else skill(attack_method) for skill in get_random_skills(4)]
                ],
-            9: [[skill() if not issubclass(skill, AttackSkill) else skill(attack_method) for skill in get_random_skills(3)],
-                 ('attack', 1)],
-            10: ['Aura of Courage'],
-            11: ['Radiant Strikes'],
+            9: [
+                    [skill() if not issubclass(skill, AttackSkill) else skill(attack_method) for skill in get_random_skills(5)],
+                    ('attack', 1)
+                ],
+            10: [
+                    StatusEffect('Aura of Protection', [('attack', 2), ('damage', 2)], -1)
+                ],
+            11: [
+                    StatusEffect('Radiant Strikes', [('damage', '1d8')], -1)
+                ],
             12: [
-                    [skill() if not issubclass(skill, AttackSkill) else skill(attack_method) for skill in get_random_skills(3)]
+                    [skill() if not issubclass(skill, AttackSkill) else skill(attack_method) for skill in get_random_skills(5)]
                ],
-            13: [[skill() if not issubclass(skill, AttackSkill) else skill(attack_method) for skill in get_random_skills(3)], 
-                 ('attack', 1)],
+            13: [
+                    [skill() if not issubclass(skill, AttackSkill) else skill(attack_method) for skill in get_random_skills(6)], 
+                    ('attack', 1)
+                ],
             14: [],
-            15: ['Heal'],
-            16: ['Subclass feature'],
-            17: [[skill() if not issubclass(skill, AttackSkill) else skill(attack_method) for skill in get_random_skills(3)], 
-                 ('attack', 1)],
-            18: ['Aura Master'],
-            19: ['Epic Boon'],
-            20: ['Subclass Feature']
+            15: [
+                    Heal()
+                ],
+            16: [
+                    'Subclass feature'
+                ],
+            17: [
+                    [skill() if not issubclass(skill, AttackSkill) else skill(attack_method) for skill in get_random_skills(6)], 
+                    ('attack', 1)
+                ],
+            18: [
+                    StatusEffect('Aura Master', 
+                                 lambda passive_skills, *args: [aura for aura in passive_skills if 'Aura' in aura.name and setattr(aura, 'effects', [(effect[0], effect[1] + 2) for effect in aura.effects])], 
+                                 -1)
+                ], # buff previous auras <- needs to be tested
+            19: [
+                    'Epic Boon'
+                ],
+            20: [
+                    'Subclass Feature'
+                ]
         }
 
 class SkeletonClass(ClassTable):
