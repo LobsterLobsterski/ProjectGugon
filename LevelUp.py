@@ -1,5 +1,5 @@
 from Dice import Die
-from tickers import AttackSkill, Bless, Distract, Heal, Rampage, Skill, Smite, StatusEffect, TripleSlash, get_random_skills
+from tickers import Agathys, AttackSkill, Bless, Distract, Heal, HolyNimbus, InvincibleConqueror, Rampage, SacredWeapon, ShieldOfFaith, Skill, Smite, StatusEffect, TripleSlash, get_random_skills
 
 
 class ClassTable:
@@ -36,12 +36,15 @@ class ClassTable:
         print('maxed out level')
         return []
     
-
 class Paladin(ClassTable):
     def __init__(self, level=0):
         super().__init__(level)
-        
-    def init_attack_method(self, attack_method):
+        self.subclass = ClassTable()
+
+    def subclass_levelup(self) -> list:
+        return self.subclass.level_up()
+
+    def init_attack_method(self, attack_method: callable):
         # NOTE: for later, you can only have one aura active at any one time unless you have aura master which allows
         # using as many auras as you want
         self.level_features_dict = {
@@ -55,7 +58,11 @@ class Paladin(ClassTable):
                     StatusEffect('Great Weapon Fighter', [('attack', 2)], -1)
                 ],
                     Smite(attack_method)],
-            4: ['Subclass'],
+            4: [[
+                    ConquestPaladin(),
+                    DevotionPaladin(),
+                ]
+                ],
             3: [
                     [skill() if not issubclass(skill, AttackSkill) else skill(attack_method) for skill in get_random_skills(3)]
                ],
@@ -67,7 +74,7 @@ class Paladin(ClassTable):
                     StatusEffect('Aura of Protection', [('armour', 2)], -1)
                 ],
             7: [
-                    'Subclass feature'
+                    'subclass_levelup'
                 ],
             8: [
                     [skill() if not issubclass(skill, AttackSkill) else skill(attack_method) for skill in get_random_skills(4)]
@@ -77,7 +84,7 @@ class Paladin(ClassTable):
                     ('attack', 1)
                 ],
             10: [
-                    StatusEffect('Aura of Protection', [('attack', 2), ('damage', 2)], -1)
+                    StatusEffect('Aura of Courage', [('attack', 2), ('damage_dice', Die(4))], -1)
                 ],
             11: [
                     StatusEffect('Radiant Strikes', [('damage_dice', Die(8))], -1)
@@ -94,7 +101,7 @@ class Paladin(ClassTable):
                     Heal()
                 ],
             16: [
-                    'Subclass feature'
+                    'subclass_levelup'
                 ],
             17: [
                     [skill() if not issubclass(skill, AttackSkill) else skill(attack_method) for skill in get_random_skills(6)], 
@@ -104,13 +111,37 @@ class Paladin(ClassTable):
                     StatusEffect('Aura Master', 
                                  lambda passive_skills, *args: [aura for aura in passive_skills if 'Aura' in aura.name and setattr(aura, 'effects', [(effect[0], effect[1] + 2) for effect in aura.effects])], 
                                  -1)
-                ], # buff previous auras <- needs to be tested
+                ], # NOTE: buff previous auras <- needs to be tested
             19: [
                     'Epic Boon'
                 ],
             20: [
-                    'Subclass Feature'
+                    'subclass_levelup'
                 ]
+        }
+
+class ConquestPaladin(ClassTable):
+    def __init__(self, level=0):
+        super().__init__(level)
+        self.name = 'Paladin of Conquest'
+
+        self.level_features_dict = {
+          1: [Agathys()],
+          2: [StatusEffect('Aura of Conquest', [('damage', self.level//2)], -1)], # this needs a new attribute ('passive damage') as it deals damage to all enemies
+          3: [StatusEffect('Scornful Rebuke', [('damage', self.level//3)], -1)], # this needs a new attribute ('biteback') as it deals damage upon receiving damage
+          4: [InvincibleConqueror()]
+        }
+        
+class DevotionPaladin(ClassTable):
+    def __init__(self, level=0):
+        super().__init__(level)
+        self.name = 'Paladin of Devotion'
+
+        self.level_features_dict = {
+          1: [ShieldOfFaith(), SacredWeapon()],
+          2: [StatusEffect('Aura of Devotion', [('defence', 1), ('armour', 1), ('health', 5)], -1)], # temp: health needs to become temporary_health
+          3: [StatusEffect('Smite of Protection', [('defence', 1), ('armour', 1)], -1)], # temp: needs to buff smite to also give defence +2 when used for 5 turns
+          4: [HolyNimbus()]
         }
 
 class SkeletonClass(ClassTable):

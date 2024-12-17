@@ -128,13 +128,52 @@ class Heal(Skill):
     def effect(target, *args):
         target.heal(DiceGroup([Die(8), Die(8)]).roll())
 
+class Agathys(Skill):
+    def __init__(self, cooldown=20):
+        super().__init__('Armour of Agathys', True, Agathys.effect, cooldown)
+
+    def effect(target, *args):
+        # TEMP: damage needs to be swapped for biteback and health for temporary_health
+        StatusEffect('Armour of Agathys', [('health', 5), ('damage', 5)], 5).apply_effect(target)
+
+class InvincibleConqueror(Skill):
+    def __init__(self, cooldown=100):
+        super().__init__('Invincible Conqueror', True, InvincibleConqueror.effect, cooldown)
+
+    def effect(target, *args):
+        # TEMP: armour needs to be swapped for resistance and damage needs to be swapped for crit_range increase 
+        StatusEffect('Invincible Conqueror', [('armour', 5), ('attack_number', 1), ('damage', Die(8))], 10).apply_effect(target)
+
+class ShieldOfFaith(Skill):
+    def __init__(self, cooldown=40):
+        super().__init__('Shield of Faith', True, ShieldOfFaith.effect, cooldown)
+
+    def effect(target, *args):
+        StatusEffect('Shield of Faith', [('defence', 2)], 10).apply_effect(target)
+        
+class SacredWeapon(Skill):
+    def __init__(self, cooldown=40):
+        super().__init__('Sacred Weapon', True, SacredWeapon.effect, cooldown)
+
+    def effect(target, *args):
+        StatusEffect('Sacred Weapon', [('damage_dice', Die(8))], 15).apply_effect(target)
+
+class HolyNimbus(Skill):
+    def __init__(self, cooldown=100):
+        super().__init__('Holy Nimbus', True, HolyNimbus.effect, cooldown)
+
+    def effect(target, *args):
+        # TEMP: damage needs to be swapped for passive_damage
+        StatusEffect('Holy Nimbus', [('defence', 2), ('armour', 2), ('damage', 5)], 10).apply_effect(target)
 
 list_of_all_skills = [Distract, 
                       Rampage, 
                       Smite, 
                       Bless, 
                       TripleSlash,
-                      Heal
+                      Heal,
+                      Agathys,
+                      ShieldOfFaith
                     ]
 
 def get_random_skills(number):

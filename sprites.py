@@ -120,18 +120,28 @@ class Creature(GameObject):
         self.status_effects = []
         self.passive_skills = []
         self.class_table = class_table
+        self.subclass = None
         self.skills =  []
 
         self.is_alive = True
 
     def level_up(self):
         gains = self.class_table.level_up()
-        print('Creature.level_up:', gains)
+        print('\n\nCreature.level_up:', gains)
         for gain in gains:
             if isinstance(gain, list): 
                 gain = self.game.enter_level_up_selection(gain)
 
-            if isinstance(gain, Skill):
+            if issubclass(type(gain), ClassTable):
+                self.subclass = gain
+                self.class_table.subclass = gain
+                gain = self.class_table.subclass_levelup()
+
+            # temp: this shouldn't be a thing
+            if isinstance(gain, str) and gain == 'subclass_levelup':
+                gain = self.class_table.subclass_levelup()
+
+            elif isinstance(gain, Skill):
                 self.skills.append(gain)
 
             elif isinstance(gain, StatusEffect):
