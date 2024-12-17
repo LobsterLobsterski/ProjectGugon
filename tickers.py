@@ -41,7 +41,6 @@ class StatusEffect(Ticker):
         super().__init__(duration)
         self.name = name
         self.effects = effects
-        self.effect_values = []
     
     def apply_effect(self, target):
         target.status_effects.append(self)
@@ -52,15 +51,24 @@ class StatusEffect(Ticker):
                 continue
 
             effect_stat, stat_change = effect
-            if isinstance(stat_change, str):
-                stat_change = Die(stat_change).roll()
 
-            self.effect_values.append(stat_change)
+            if effect_stat == 'damage_dice': #its a list
+                if isinstance(stat_change, Die):
+                    target.attributes['damage_dice'].add_die(stat_change)
+                elif isinstance(stat_change, DiceGroup):
+                    target.attributes['damage_dice'].add_dice(stat_change)
+                continue
+
             target.attributes[effect_stat] += stat_change
 
     def remove_effect(self, target):
-        for effect, effect_value in zip(self.effects, self.effect_values):
-            effect_stat, _ = effect
+        for effect in self.effects:
+            effect_stat, effect_value = effect
+
+            if effect_stat == 'damage_dice':
+                target.attributes['damage_dice'].remove(effect_value)
+                continue
+
             target.attributes[effect_stat] -= effect_value
 
     def update(self):
@@ -103,13 +111,12 @@ class Bless(Skill):
         super().__init__('Bless', True, Bless.effect, cooldown)
 
     def effect(target, *args):
-        StatusEffect('Blessed', [('attack', 10), ('damage', 5)], 3).apply_effect(target)
+        StatusEffect('Blessed', [('attack', 2), ('damage_dice', Die(4))], 4).apply_effect(target)
 
 class TripleSlash(AttackSkill):
     def __init__(self, attack_method: callable, cooldown=3):
         def effect(target, *args):
             for _ in range(3):
-                print('TripleSlash target', target, args)
                 attack_method(target)
 
         super().__init__('Triple Slash', False, effect, cooldown)

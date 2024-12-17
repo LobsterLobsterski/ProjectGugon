@@ -281,10 +281,11 @@ class CombatPlayer(Player):
     
     def attack_action(self, target: Creature):
         print('player attacked', target.name)
-        if random.randint(1, 20)+self.attributes['attack'] >= target.attributes['defence']:
-            self.deal_damage(target)
-        else:
-            print('Attack on', target, 'missed!')
+        for _ in range(self.attributes['attack_number']):
+            if random.randint(1, 20)+self.attributes['attack'] >= target.attributes['defence']:
+                self.deal_damage(target)
+            else:
+                print('Attack on', target, 'missed!')
 
     def defend_action(self):
         print('player defended')
@@ -496,29 +497,17 @@ class CombatSkeleton(Creature):
     ### actions
     def attack_action(self, target, *args):
         print('skeleton attacked', target)
-        if self.attributes['attack']+random.randint(1, 20) > target.attributes['defence']:
-            target.receive_damage(self.attributes['damage'])
-        else:
-            print('Attack on', target, 'missed!')
+        for _ in range(self.attributes['attack_number']):
+            if self.attributes['attack']+random.randint(1, 20) > target.attributes['defence']:
+                target.receive_damage(self.attributes['damage'])
+            else:
+                print('Attack on', target, 'missed!')
 
     def defend_action(self, target, *args):
         print('skeleton defended')
         s = StatusEffect("Defence", [('defence', 10)], 1)
         s.apply_effect(target)
-    
-    def distract(self, target, *args):
-        s = StatusEffect('Distracted', [('defence', -10)], 1)
-        s.apply_effect(target)
 
-    def rampage(self, target, self_target):
-        print('rampage: attacking multiple times with lowered attack and defence', target)
-        s = StatusEffect('Out of Position', [('defence', -20)], 3)
-        s.apply_effect(self_target)
-        s = StatusEffect('Out of Position', [('attack', -15)], 1)
-        s.apply_effect(self_target)
-
-        for _ in range(3):
-            self.attack_action(target, self)
     ###
 
     def tickers_update(self):

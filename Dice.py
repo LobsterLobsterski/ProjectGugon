@@ -20,3 +20,6 @@ class DiceGroup:
     
     def add_dice(self, dice: list[Die]):
         self.dice += dice
+
+    def remove(self, die: Die):
+        self.dice.remove(die)

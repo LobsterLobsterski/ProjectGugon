@@ -1,3 +1,4 @@
+from Dice import Die
 from tickers import AttackSkill, Bless, Distract, Heal, Rampage, Skill, Smite, StatusEffect, TripleSlash, get_random_skills
 
 
@@ -59,7 +60,7 @@ class Paladin(ClassTable):
                     [skill() if not issubclass(skill, AttackSkill) else skill(attack_method) for skill in get_random_skills(3)]
                ],
             5: [
-                    'Double Attack', 
+                    ('attack_number', 1),
                     ('attack', 1)
                 ],
             6: [
@@ -79,7 +80,7 @@ class Paladin(ClassTable):
                     StatusEffect('Aura of Protection', [('attack', 2), ('damage', 2)], -1)
                 ],
             11: [
-                    StatusEffect('Radiant Strikes', [('damage', '1d8')], -1)
+                    StatusEffect('Radiant Strikes', [('damage_dice', Die(8))], -1)
                 ],
             12: [
                     [skill() if not issubclass(skill, AttackSkill) else skill(attack_method) for skill in get_random_skills(5)]
