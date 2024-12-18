@@ -284,6 +284,13 @@ class CombatState(State):
             if event.type == pg.QUIT:
                 self.quit()
 
+            if event.type == pg.KEYDOWN:
+                if event.key == pg.K_ESCAPE:
+                    self.quit()
+                if event.key == pg.K_k:
+                    print('!self kill!')
+                    self.player.is_alive = False
+
             if event.type == pg.MOUSEBUTTONDOWN:
                 self.update_selected_action(event.pos)
                 
@@ -554,8 +561,11 @@ class CombatState(State):
         self.screen.blit(text, (WIDTH//3+text.get_rect().width//2, HEIGHT//4))
     
     ###
-    def exit_combat(self):
-        self.game.enter_world_map()
+    def exit_combat(self, died: bool):
+        if died:
+            self.game.enter_hub()
+        else:
+            self.game.enter_world_map()
     
     def update(self):
         if len(self.mobs_group) == 0:
@@ -565,15 +575,16 @@ class CombatState(State):
             elif pg.time.get_ticks() - self.end_screen_timer > 2000:
                 self.map_mob.kill()
                 self.player.add_experience(self.encounter_experience)
-                self.exit_combat()
+                self.exit_combat(False)
 
         elif not self.player.is_alive:
             if self.end_screen_timer is None:
                 self.end_screen_timer = pg.time.get_ticks()
 
             elif pg.time.get_ticks() - self.end_screen_timer > 2000:
-                self.player.kill()
-                self.exit_combat()
+                self.player.die()
+                self.game.player.die()
+                self.exit_combat(True)
 
         if not self.player_turn:
             for enemy in self.mobs_group:
@@ -591,5 +602,54 @@ class CombatState(State):
 
 class MenuState:
     pass
-class HubState:
-    pass
+
+class HubState(State):
+    def __init__(self, game, clock, screen):
+        super().__init__(game, clock, screen)
+        self.font = pg.font.Font(None, 36)
+        self.hub_areas = [
+            {"name": "Tavern", "rect": pg.Rect(100, 200, 200, 50), "hovered": False},
+            {"name": "Blacksmith", "rect": pg.Rect(400, 200, 200, 50), "hovered": False},
+            {"name": "Recruitment", "rect": pg.Rect(700, 200, 200, 50), "hovered": False},
+            {"name": "Return to Dungeon", "rect": pg.Rect(300, 400, 300, 50), "hovered": False},
+        ]
+
+    def run(self):
+        while True:
+            self.dt = self.clock.tick(FPS) / 1000
+            self.events()
+            # self.update()
+            self.draw()
+
+    def events(self):
+        mouse_pos = pg.mouse.get_pos()
+        for area in self.hub_areas:
+            area["hovered"] = area["rect"].collidepoint(mouse_pos)
+        for event in pg.event.get():
+            if event.type == pg.QUIT:
+                self.quit()
+            elif event.type == pg.MOUSEBUTTONDOWN:
+                for area in self.hub_areas:
+                    if area["rect"].collidepoint(event.pos):
+                        self.handle_selection(area["name"])
+
+    def handle_selection(self, name):
+        if name == "Tavern":
+            print("Visiting the Tavern (heal player, etc.)")
+        elif name == "Blacksmith":
+            print("Visiting the Blacksmith (upgrade gear)")
+        elif name == "Recruitment":
+            print("Visiting Recruitment (add companions)")
+        elif name == "Return to Dungeon":
+            self.game.return_to_dungeon()
+
+    def draw(self):
+        self.screen.fill(DARK_GRAY)
+        for area in self.hub_areas:
+            color = GREEN if area["hovered"] else GRAY
+            pg.draw.rect(self.screen, color, area["rect"])
+            text = self.font.render(area["name"], True, BLACK)
+            self.screen.blit(text, (area["rect"].x + 10, area["rect"].y + 10))
+        
+        pg.display.flip()
+

@@ -1,7 +1,7 @@
 import pygame as pg
 
 from GameState import GameState
-from gameStates import CombatState, LevelUpState, WorldMapState
+from gameStates import CombatState, HubState, LevelUpState, WorldMapState
 from settings import HEIGHT, TITLE, WIDTH
 from sprites import CombatPlayer, Creature, MobType
 
@@ -14,7 +14,10 @@ class Game:
         self.clock = pg.time.Clock()
         pg.key.set_repeat(100, 100)
         self.map_state = WorldMapState(self, self.clock, self.screen)
+        self.hub_state = HubState(self, self.clock, self.screen)
+
         self.player = self.map_state.player
+        
 
         self.current_state = self.map_state
  
@@ -34,11 +37,20 @@ class Game:
         # temp: arbitrary number
         self.player.add_experience(600)
         self.enter_world_map()
+
+    def return_to_dungeon(self):
+        self.map_state = WorldMapState(self, self.clock, self.screen)
+        self.player = self.map_state.player
+        self.enter_world_map()
     
     def enter_level_up_selection(self, choices):
         state = LevelUpState(self, self.clock, self.screen, choices)
         selected_choice = state.run()
         return selected_choice
+
+    def enter_hub(self):
+        self.current_state = self.hub_state
+        self.run()
 
 if __name__ == '__main__':
     g = Game()

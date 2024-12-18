@@ -101,7 +101,6 @@ class GameObject(pg.sprite.Sprite):
     def init_behaviour(self, behaviour_tree: Dict[Callable, Callable]) -> BehaviourTree:
         return BehaviourTree(self, behaviour_tree)
 
-
 class Creature(GameObject):
     def __init__(self, game, groups: Iterable, image: pg.Surface, x: int, y: int, health: int, damage: int, attack: int, defence: int, armour: int, dice: DiceGroup, class_table: ClassTable):
         super().__init__(groups, image, x, y)
@@ -147,7 +146,7 @@ class Creature(GameObject):
         gains = self.class_table.level_up()
         print('\n\nCreature.level_up:', gains)
         for gain in gains:
-            if isinstance(gain, list): 
+            if isinstance(gain, list):
                 gain = self.game.enter_level_up_selection(gain)
 
             if issubclass(type(gain), ClassTable):
@@ -205,6 +204,7 @@ class Creature(GameObject):
             self.receive_damage(target.attributes['biteback'])
 
     def die(self):
+        print('Creature die!', self.__class__.__name__)
         self.is_alive = False
         self.kill()
         # self.spawn_corpse()
@@ -227,6 +227,7 @@ class Creature(GameObject):
     def update(self):
         super().update()
         self.heal(self.attributes['regeneration'])
+    
 
 class Player(Creature):
     def __init__(self, game, groups: Iterable, collision_layers: tuple, init_x_pos: int, init_y_pos: int, classTable: ClassTable):
@@ -325,7 +326,6 @@ class Player(Creature):
         for s in self.skills:
             s.update()   
 
-
 class CombatPlayer(Player):
     # should probably inherit from Player and then rewrite code so that CombatPlayer receives damage into Player+
     def __init__(self, game, groups, collision_layers, init_x_pos, init_y_pos, attributes, skills, classTable):
@@ -347,7 +347,6 @@ class CombatPlayer(Player):
         print('player attacked', target.name)
         for _ in range(self.attributes['attack_number']):
             self.make_attack(target)
-        # exit()
 
     def defend_action(self):
         print('player defended')
@@ -357,9 +356,6 @@ class CombatPlayer(Player):
     def skill_action(self, selected_skill: Skill, target: Creature):
         print('player skilled!', selected_skill, 'target:', target)
         selected_skill.activate(target, self)
-
-    def kill(self):
-        self.die()
 
     def tickers_update(self):
         super().tickers_update()
@@ -481,7 +477,7 @@ class MapMob(GameObject):
 
     def kill(self):
         self.path = []
-        super().kill()
+        self.kill()
     
 
 class Goblin(MapMob):
