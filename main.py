@@ -31,6 +31,8 @@ class Game:
 
     def enter_new_level(self):
         self.map_state = WorldMapState(self, self.clock, self.screen)
+        # temp: arbitrary number
+        self.player.add_experience(600)
         self.enter_world_map()
     
     def enter_level_up_selection(self, choices):

@@ -29,7 +29,6 @@ class Direction(Enum):
     LEFT = 3
     RIGHT = 4
 
-
 class Spritesheet:
     def __init__(self, mob_type: MobType):
         filename, pixel_size = self.get_spritesheet_data(mob_type)
@@ -111,6 +110,7 @@ class Creature(GameObject):
             'max_health': health,
             'health': health,
             'temporary_health': 0,
+            'hit_dice': Die(8), # temp: depends on class
             'damage': damage,
             'damage_dice': dice,
             'attack': attack,
@@ -124,6 +124,7 @@ class Creature(GameObject):
             'resistance': 0
 
         }
+        self.experience = 0
         self.status_effects = []
         self.passive_skills = []
         self.class_table = class_table
@@ -132,7 +133,17 @@ class Creature(GameObject):
 
         self.is_alive = True
 
+    def add_experience(self, experience_points: int):
+        print(f'{self} receieved {experience_points} experience!')
+        self.experience += experience_points
+        if self.experience >= self.class_table.next_experience_threshold():
+            self.level_up()
+
     def level_up(self):
+        hp_increase = self.attributes['hit_dice'].roll()
+        self.attributes['max_health'] += hp_increase
+        self.attributes['health'] += hp_increase
+
         gains = self.class_table.level_up()
         print('\n\nCreature.level_up:', gains)
         for gain in gains:

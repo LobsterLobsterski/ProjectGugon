@@ -1,4 +1,5 @@
 from enum import Enum
+from math import ceil
 import sys
 import pygame as pg
 
@@ -198,7 +199,7 @@ class WorldMapState(State):
                     self.player_turn = False
 
                 if event.key == pg.K_l:
-                    self.player.level_up()
+                    self.player.add_experience(600)
                 
                 #when player does an action, switch the turn
                 if self.player_turn and self.player.is_alive:
@@ -218,14 +219,14 @@ class CombatState(State):
         self.map_mob = map_mob
         self.new()
         self.end_screen_timer = None
-
-        print(self.game.player.combat_player)
+        self.encounter_experience = 0
 
         if not self.game.player.combat_player:
             self.game.player.assign_combat_sprite((self.all_sprites))
         self.player = self.game.player.combat_player
 
         self.generate_encounter(map_mob.mob_type)
+        self.get_encounter_experience()
 
         self.selected_skill = None
         self.selected_action = None
@@ -238,9 +239,14 @@ class CombatState(State):
 
         self.target_selection_box = pg.Rect(250, HEIGHT-260, WIDTH-250-50, 200)
 
+    def get_encounter_experience(self):
+        difficult_mod = 1.5+.5*ceil(len(self.mobs_group)/3)
+        sum_enemy_exp = sum([mob.get_level()*50 for mob in self.mobs_group])
+        self.encounter_experience = sum_enemy_exp*difficult_mod
+
     def generate_mob(self, mob_type: MobType, mob_centre: tuple[int, int]):
         if mob_type == MobType.Skeleton:
-            CombatSkeleton(self.game, (self.all_sprites, self.mobs_group), self.player, mob_centre)
+            return CombatSkeleton(self.game, (self.all_sprites, self.mobs_group), self.player, mob_centre)
         else:
             raise NotImplementedError(f'[generate_mob] generation of {mob_type} not implemented yet!')
     
@@ -248,6 +254,7 @@ class CombatState(State):
         num_of_enemies = 2#random.randint(1, 4)
         screen_width_per_enemy = WIDTH//num_of_enemies
         enemy_width = 150
+        
         for idx in range(num_of_enemies):
             enemy_midpoint = (2*screen_width_per_enemy*idx + screen_width_per_enemy)//2
             enemy_leftmost_pos = enemy_midpoint-enemy_width//2
@@ -557,6 +564,7 @@ class CombatState(State):
 
             elif pg.time.get_ticks() - self.end_screen_timer > 2000:
                 self.map_mob.kill()
+                self.player.add_experience(self.encounter_experience)
                 self.exit_combat()
 
         elif not self.player.is_alive:
