@@ -388,6 +388,7 @@ class CombatState(State):
         self.exit_combat()
         self.player_turn=False
 
+    
     ### drawing
     def draw(self):
         pg.display.set_caption("{:.2f}".format(self.clock.get_fps()))
@@ -568,9 +569,14 @@ class CombatState(State):
 
         if not self.player_turn:
             for enemy in self.mobs_group:
+                enemy.receive_damage(self.player.attributes['passive_damage'])
+                self.player.receive_damage(enemy.attributes['passive_damage'])
+
+                enemy.update()
                 enemy.tickers_update()
                 enemy.fight()
 
+            self.player.update()
             self.player.tickers_update()
             self.player_turn = True
             self.selected_action = None

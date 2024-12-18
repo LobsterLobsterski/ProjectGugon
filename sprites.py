@@ -110,12 +110,19 @@ class Creature(GameObject):
         self.attributes = {
             'max_health': health,
             'health': health,
+            'temporary_health': 0,
             'damage': damage,
             'damage_dice': dice,
             'attack': attack,
+            'crit_range': 20,
             'attack_number': 1, # number of attacks made per attack action
             'defence': defence,
-            'armour': armour
+            'armour': armour,
+            'passive_damage': 0,
+            'biteback': 0,
+            'regeneration': 0,
+            'resistance': 0
+
         }
         self.status_effects = []
         self.passive_skills = []
@@ -156,15 +163,35 @@ class Creature(GameObject):
         return self.class_table.level
     
     def receive_damage(self, damage: int):
-        print(self.id, 'received', max(0, damage - self.attributes['armour']), 'damage!')
-        self.attributes['health'] -= max(0, damage - self.attributes['armour'])
+        damage = max(0, damage - self.attributes['armour'])
+        if not damage:
+            return
+        
+        print(self.id, 'received', damage, 'damage!')
+        if self.attributes['resistance']:
+            damage //= 2
+
+        # print('\n\nth:', self.attributes['temporary_health'])
+        self.attributes['temporary_health'] -= damage
+        if self.attributes['temporary_health'] >= 0:
+            return
+
+        # print('negative th:', self.attributes['temporary_health'])
+        damage = self.attributes['temporary_health']*-1
+        self.attributes['temporary_health'] = 0
+        # print('damage:', damage)
+        
+        self.attributes['health'] -= damage
         if self.attributes['health'] <= 0:
             print(self.id, 'died!')
             self.die()
     
-    def deal_damage(self, target: Creature):
-        damage = self.attributes['damage_dice'].roll() + self.attributes['damage']
+    def deal_damage(self, target: Creature, is_crit: bool):
+        damage = self.attributes['damage_dice'].roll(is_crit) + self.attributes['damage']
         target.receive_damage(damage)
+
+        if target.attributes['biteback']:
+            self.receive_damage(target.attributes['biteback'])
 
     def die(self):
         self.is_alive = False
@@ -172,16 +199,23 @@ class Creature(GameObject):
         # self.spawn_corpse()
             
     def heal(self, amount: int):
-        self.attributes['health'] += min(self.attributes['health']+amount, self.attributes['max_health'])
+        if not amount:
+            return
+        
+        print(self, 'healing for', amount)
+        self.attributes['health'] = min(self.attributes['health']+amount, self.attributes['max_health'])
     
     def tickers_update(self):
         for s in self.status_effects:
             s.update()
             if not s.is_ticking():
-                print('[tickers_update] removing', s)
+                # print('[tickers_update] removing', s)
                 self.status_effects.remove(s)
                 s.remove_effect(self)
 
+    def update(self):
+        super().update()
+        self.heal(self.attributes['regeneration'])
 
 class Player(Creature):
     def __init__(self, game, groups: Iterable, collision_layers: tuple, init_x_pos: int, init_y_pos: int, classTable: ClassTable):
@@ -263,6 +297,7 @@ class Player(Creature):
         self.game.initiate_combat(mob, True)
         
     def update(self):
+        super().update()
         self.rect.x = self.x_pos * TILESIZE
         self.rect.y = self.y_pos * TILESIZE
         if self.direction == Direction.RIGHT:
@@ -289,13 +324,19 @@ class CombatPlayer(Player):
         self.skills = skills
         self.attributes = attributes
     
+    def make_attack(self, target: Creature):
+        roll = Die(20).roll()
+        is_crit = roll >= self.attributes['crit_range']
+        if roll+self.attributes['attack'] >= target.attributes['defence']:
+            self.deal_damage(target, is_crit)
+        else:
+            print('Attack on', target, 'missed!')
+    
     def attack_action(self, target: Creature):
         print('player attacked', target.name)
         for _ in range(self.attributes['attack_number']):
-            if random.randint(1, 20)+self.attributes['attack'] >= target.attributes['defence']:
-                self.deal_damage(target)
-            else:
-                print('Attack on', target, 'missed!')
+            self.make_attack(target)
+        # exit()
 
     def defend_action(self):
         print('player defended')
@@ -313,7 +354,10 @@ class CombatPlayer(Player):
         super().tickers_update()
         for s in self.skills:
             s.update()
-    
+
+    def update(self):
+        self.heal(self.attributes['regeneration'])
+        
 
 class MapMob(GameObject):
     def __init__(self, game, map, player, groups: Iterable, init_x_pos: int, init_y_pos: int, mob_type: MobType):
@@ -464,6 +508,7 @@ class CombatSkeleton(Creature):
         super().__init__(game, groups, self.spritesheet.get_sprite(random.randint(0, 2), 0), 
                          0, 0, 30, 10, 20, 30, 5, DiceGroup([Die(6)]), SkeletonClass(self.attack_action))
         
+        print('sheleton', CombatSkeleton.skeleton_counter, 'has ', self.attributes['health'], self.attributes['max_health'])
         self.image = pg.transform.scale(self.image, (128, 128))
         self.rect = self.image.get_rect(center=centre)
 
@@ -489,7 +534,6 @@ class CombatSkeleton(Creature):
     def fight(self):
         print('\n')
         action = self.bahaviour_tree.find_action()
-        print('action:', action)
         action(self.target, self)
     
     ### conditions

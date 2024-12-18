@@ -24,7 +24,7 @@ class Skill(Ticker):
         self.target_is_self = target_is_self
 
     def activate(self, target, self_target):
-        print(self.name, 'was activated!', self.effect)
+        # print(self.name, 'was activated!', self.effect)
         self.effect(target, self_target)
         self.timer = self.cooldown
     
@@ -44,7 +44,7 @@ class StatusEffect(Ticker):
     
     def apply_effect(self, target):
         target.status_effects.append(self)
-        print('[StatusEffect] applying', self.effects, 'to', target)
+        # print('[StatusEffect] applying', self.effects, 'to', target)
         for effect in self.effects:
             if isinstance(effect, Callable):
                 effect(target.passive_skills)
@@ -68,6 +68,9 @@ class StatusEffect(Ticker):
             if effect_stat == 'damage_dice':
                 target.attributes['damage_dice'].remove(effect_value)
                 continue
+
+            if effect_stat == 'temporary_health':
+                target.attributes['temporary_health'] = 0
 
             target.attributes[effect_stat] -= effect_value
 
@@ -134,15 +137,14 @@ class Agathys(Skill):
 
     def effect(target, *args):
         # TEMP: damage needs to be swapped for biteback and health for temporary_health
-        StatusEffect('Armour of Agathys', [('health', 5), ('damage', 5)], 5).apply_effect(target)
+        StatusEffect('Armour of Agathys', [('temporary_health', 5), ('biteback', 5)], 5).apply_effect(target)
 
 class InvincibleConqueror(Skill):
     def __init__(self, cooldown=100):
         super().__init__('Invincible Conqueror', True, InvincibleConqueror.effect, cooldown)
 
     def effect(target, *args):
-        # TEMP: armour needs to be swapped for resistance and damage needs to be swapped for crit_range increase 
-        StatusEffect('Invincible Conqueror', [('armour', 5), ('attack_number', 1), ('damage', Die(8))], 10).apply_effect(target)
+        StatusEffect('Invincible Conqueror', [('resistance', 1), ('attack_number', 1), ('crit_range', -1)], 10).apply_effect(target)
 
 class ShieldOfFaith(Skill):
     def __init__(self, cooldown=40):
@@ -164,39 +166,8 @@ class HolyNimbus(Skill):
 
     def effect(target, *args):
         # TEMP: damage needs to be swapped for passive_damage
-        StatusEffect('Holy Nimbus', [('defence', 2), ('armour', 2), ('damage', 5)], 10).apply_effect(target)
+        StatusEffect('Holy Nimbus', [('defence', 2), ('armour', 2), ('passive_damage', 10)], 10).apply_effect(target)
 
-class BoonOfCombatProwess(Skill):
-    def __init__(self, cooldown=100):
-        super().__init__('Holy Nimbus', True, HolyNimbus.effect, cooldown)
-
-    def effect(target, *args):
-        # TEMP: damage needs to be swapped for passive_damage
-        StatusEffect('Holy Nimbus', [('defence', 2), ('armour', 2), ('damage', 5)], 10).apply_effect(target)
-
-class BoonOfFortitude(Skill):
-    def __init__(self, cooldown=100):
-        super().__init__('Holy Nimbus', True, HolyNimbus.effect, cooldown)
-
-    def effect(target, *args):
-        # TEMP: damage needs to be swapped for passive_damage
-        StatusEffect('Holy Nimbus', [('defence', 2), ('armour', 2), ('damage', 5)], 10).apply_effect(target)
-
-class BoonOfCombatProwess(Skill):
-    def __init__(self, cooldown=100):
-        super().__init__('Holy Nimbus', True, HolyNimbus.effect, cooldown)
-
-    def effect(target, *args):
-        # TEMP: damage needs to be swapped for passive_damage
-        StatusEffect('Holy Nimbus', [('defence', 2), ('armour', 2), ('damage', 5)], 10).apply_effect(target)
-
-class BoonOfCombatProwess(Skill):
-    def __init__(self, cooldown=100):
-        super().__init__('Holy Nimbus', True, HolyNimbus.effect, cooldown)
-
-    def effect(target, *args):
-        # TEMP: damage needs to be swapped for passive_damage
-        StatusEffect('Holy Nimbus', [('defence', 2), ('armour', 2), ('damage', 5)], 10).apply_effect(target)
 list_of_all_skills = [Distract, 
                       Rampage, 
                       Smite, 
@@ -211,7 +182,7 @@ list_of_all_skills = [Distract,
 def get_epic_boons():
     return [
         StatusEffect('Boon of Fortitude', [('max_health', 40), ('health', 40)], -1),
-        StatusEffect('Boon of Recovery', [('health', 40)], -1), # temp: add regeneration
+        StatusEffect('Boon of Recovery', [('health', 40), ('regeneration', 1)], -1),
         StatusEffect('Boon of Combat Prowess', [('attack', 100)], -1),# temp: only for first attack of turn
         StatusEffect('Boon of Spell Recall', [('defence', 1)], -1),# temp: one random skill goes off cooldown at the start of the turn
     ]

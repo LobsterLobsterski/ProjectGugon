@@ -127,8 +127,8 @@ class ConquestPaladin(ClassTable):
 
         self.level_features_dict = {
           1: [Agathys()],
-          2: [StatusEffect('Aura of Conquest', [('damage', self.level//2)], -1)], # this needs a new attribute ('passive damage') as it deals damage to all enemies
-          3: [StatusEffect('Scornful Rebuke', [('damage', self.level//3)], -1)], # this needs a new attribute ('biteback') as it deals damage upon receiving damage
+          2: [StatusEffect('Aura of Conquest', [('passive_damage', self.level//2)], -1)],
+          3: [StatusEffect('Scornful Rebuke', [('biteback', self.level//3)], -1)],
           4: [InvincibleConqueror()]
         }
         
@@ -139,7 +139,7 @@ class DevotionPaladin(ClassTable):
 
         self.level_features_dict = {
           1: [ShieldOfFaith(), SacredWeapon()],
-          2: [StatusEffect('Aura of Devotion', [('defence', 1), ('armour', 1), ('health', 5)], -1)], # temp: health needs to become temporary_health
+          2: [StatusEffect('Aura of Devotion', [('defence', 1), ('armour', 1), ('temporary_health', 10)], -1)],
           3: [StatusEffect('Smite of Protection', [('defence', 1), ('armour', 1)], -1)], # temp: needs to buff smite to also give defence +2 when used for 5 turns
           4: [HolyNimbus()]
         }
