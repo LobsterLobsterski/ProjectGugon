@@ -1,5 +1,6 @@
 import pygame as pg
 
+from Dice import Die
 from GameState import GameState
 from gameStates import CombatState, HubState, LevelUpState, WorldMapState
 from settings import HEIGHT, TITLE, WIDTH
@@ -36,11 +37,14 @@ class Game:
         self.map_state = WorldMapState(self, self.clock, self.screen)
         # temp: arbitrary number
         self.player.add_experience(600)
+        self.player.add_meta_currency(Die(20).roll())
         self.enter_world_map()
 
     def return_to_dungeon(self):
+        upgrades = self.hub_state.get_character_upgrades()
         self.map_state = WorldMapState(self, self.clock, self.screen)
         self.player = self.map_state.player
+        self.player.apply_upgrades(upgrades)
         self.enter_world_map()
     
     def enter_level_up_selection(self, choices):
@@ -49,6 +53,8 @@ class Game:
         return selected_choice
 
     def enter_hub(self):
+        print('player has procured:', self.player.meta_currency, 'meta currency during this run!')
+        self.hub_state.store_meta_currency(self.player.meta_currency)
         self.current_state = self.hub_state
         self.run()
 

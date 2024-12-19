@@ -3,6 +3,7 @@ from math import ceil
 import sys
 import pygame as pg
 
+from Dice import Die
 from LevelUp import Paladin
 from map import Map, Viewport
 from proceduralGeneration import ProceduralGenerationType
@@ -251,7 +252,7 @@ class CombatState(State):
             raise NotImplementedError(f'[generate_mob] generation of {mob_type} not implemented yet!')
     
     def generate_encounter(self, mob_type: MobType):
-        num_of_enemies = 2#random.randint(1, 4)
+        num_of_enemies = 1#random.randint(1, 4)
         screen_width_per_enemy = WIDTH//num_of_enemies
         enemy_width = 150
         
@@ -569,12 +570,14 @@ class CombatState(State):
     
     def update(self):
         if len(self.mobs_group) == 0:
+            self.map_mob.kill()
+
             if self.end_screen_timer is None:
                 self.end_screen_timer = pg.time.get_ticks()
 
             elif pg.time.get_ticks() - self.end_screen_timer > 2000:
-                self.map_mob.kill()
                 self.player.add_experience(self.encounter_experience)
+                self.player.add_meta_currency(Die(10).roll())
                 self.exit_combat(False)
 
         elif not self.player.is_alive:
@@ -606,14 +609,33 @@ class MenuState:
 class HubState(State):
     def __init__(self, game, clock, screen):
         super().__init__(game, clock, screen)
+        # temp: should be 1
+        self.base_level = 2
+        self.player_upgrade_cost = 10
+        self.currency = 0
+
         self.font = pg.font.Font(None, 36)
         self.hub_areas = [
-            {"name": "Tavern", "rect": pg.Rect(100, 200, 200, 50), "hovered": False},
-            {"name": "Blacksmith", "rect": pg.Rect(400, 200, 200, 50), "hovered": False},
-            {"name": "Recruitment", "rect": pg.Rect(700, 200, 200, 50), "hovered": False},
+            {"name": "Base Upgrades", "rect": pg.Rect(100, 200, 200, 50), "hovered": False},
+            {"name": "Character Upgrades", "rect": pg.Rect(400, 200, 300, 50), "hovered": False},
             {"name": "Return to Dungeon", "rect": pg.Rect(300, 400, 300, 50), "hovered": False},
         ]
 
+        self.base_upgrade_cost = 20 * self.base_level
+        self.character_upgrades = [
+            {'name': 'Max Health', 'rect': pg.Rect(100, 200, 200, 100), 'level': 0, 'hovered': False},
+            {'name': 'Damage', 'rect': pg.Rect(350, 200, 200, 100), 'level': 0, 'hovered': False},
+            {'name': 'Attack', 'rect': pg.Rect(600, 200, 200, 100), 'level': 0, 'hovered': False},
+            {'name': 'Defense', 'rect': pg.Rect(850, 200, 200, 100), 'level': 0, 'hovered': False}
+        ]
+
+        self.upgrades_visible = False
+        self.return_button = pg.Rect(300, 500, 200, 50)
+        self.return_button_hovered = False
+
+    def get_character_upgrades(self) -> list[tuple[str, int]]:
+        return [(upgrade['name'].lower().replace(' ', '_'), upgrade['level']) for upgrade in self.character_upgrades if upgrade['level']]
+    
     def run(self):
         while True:
             self.dt = self.clock.tick(FPS) / 1000
@@ -623,33 +645,99 @@ class HubState(State):
 
     def events(self):
         mouse_pos = pg.mouse.get_pos()
+
         for area in self.hub_areas:
             area["hovered"] = area["rect"].collidepoint(mouse_pos)
+
+        self.return_button_hovered = self.return_button.collidepoint(mouse_pos)
+
+        if self.upgrades_visible:
+            for upgrade in self.character_upgrades:
+                upgrade_rect = upgrade['rect']
+                upgrade["hovered"] = upgrade_rect.collidepoint(mouse_pos)
+
         for event in pg.event.get():
             if event.type == pg.QUIT:
                 self.quit()
+
             elif event.type == pg.MOUSEBUTTONDOWN:
-                for area in self.hub_areas:
-                    if area["rect"].collidepoint(event.pos):
-                        self.handle_selection(area["name"])
+                if not self.upgrades_visible:
+                    for area in self.hub_areas:
+                        if area["rect"].collidepoint(event.pos):
+                            self.handle_selection(area["name"])
+                else:
+                    if self.return_button.collidepoint(event.pos):
+                        self.upgrades_visible = False
+                    else:
+                        for idx, upgrade in enumerate(self.character_upgrades):
+                            upgrade_rect = upgrade['rect']
+                            if upgrade_rect.collidepoint(event.pos):
+                                self.purchase_upgrade(idx)
 
     def handle_selection(self, name):
-        if name == "Tavern":
-            print("Visiting the Tavern (heal player, etc.)")
-        elif name == "Blacksmith":
-            print("Visiting the Blacksmith (upgrade gear)")
-        elif name == "Recruitment":
-            print("Visiting Recruitment (add companions)")
+        if name == "Base Upgrades":
+            self.upgrade_base()
+        elif name == "Character Upgrades":
+            self.upgrades_visible = True
         elif name == "Return to Dungeon":
             self.game.return_to_dungeon()
 
+    def upgrade_base(self):
+        if self.currency > self.base_upgrade_cost:
+            self.base_level+=1
+            self.base_upgrade_cost = 100 * self.base_level
+            print(f"Base upgraded to level {self.base_level}")
+        else:
+            print("Not enough meta-currency!")
+
+    def purchase_upgrade(self, upgrade_idx: int):
+        upgrade = self.character_upgrades[upgrade_idx]
+        cost = self.player_upgrade_cost
+
+        if self.currency >= cost:
+            self.currency -= cost
+            upgrade['level'] += 1
+            self.player_upgrade_cost = int(cost * 1.5)
+            print(f"{upgrade['name']} upgraded to level {upgrade['level']}")
+        else:
+            print("Not enough meta-currency!")
+    
     def draw(self):
         self.screen.fill(DARK_GRAY)
-        for area in self.hub_areas:
-            color = GREEN if area["hovered"] else GRAY
-            pg.draw.rect(self.screen, color, area["rect"])
-            text = self.font.render(area["name"], True, BLACK)
-            self.screen.blit(text, (area["rect"].x + 10, area["rect"].y + 10))
-        
+
+        if self.upgrades_visible:
+            self.draw_upgrade_menu()
+        else:
+            for area in self.hub_areas:
+                color = GREEN if area["hovered"] else GRAY
+                pg.draw.rect(self.screen, color, area["rect"])
+                text = self.font.render(area["name"], True, BLACK)
+                self.screen.blit(text, (area["rect"].x + 10, area["rect"].y + 10))
+            
         pg.display.flip()
+
+    def draw_upgrade_menu(self):
+        for upgrade in self.character_upgrades:
+            upgrade_rect = upgrade['rect']
+            color = (180, 180, 250) if upgrade["hovered"] else GRAY
+            pg.draw.rect(self.screen, color, upgrade_rect)
+            pg.draw.rect(self.screen, BLACK, upgrade_rect, 2)
+
+            # Render upgrade text
+            name_text = self.font.render(upgrade['name'], True, BLACK)
+            level_text = self.font.render(f"Level: {upgrade['level']}", True, BLACK)
+            cost_text = self.font.render(f"Cost: {self.player_upgrade_cost}", True, BLACK)
+
+            self.screen.blit(name_text, (upgrade_rect.x + 10, upgrade_rect.y + 10))
+            self.screen.blit(level_text, (upgrade_rect.x + 10, upgrade_rect.y + 40))
+            self.screen.blit(cost_text, (upgrade_rect.x + 10, upgrade_rect.y + 70))
+
+        # Draw Return button
+        color = (180, 180, 250) if self.return_button_hovered else GRAY
+        pg.draw.rect(self.screen, color, self.return_button)
+        return_text = self.font.render("Return", True, BLACK)
+        self.screen.blit(return_text, (self.return_button.x + 50, self.return_button.y + 10))
+    
+    def store_meta_currency(self, number: int):
+        self.currency += number 
 

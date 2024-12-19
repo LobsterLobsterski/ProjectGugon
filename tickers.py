@@ -104,7 +104,7 @@ class Rampage(AttackSkill):
 class Smite(AttackSkill):
     def __init__(self, attack_method: callable, cooldown=4):
         def effect(target, self_target):
-            StatusEffect('Smite', [('damage', '2d8')], 0).apply_effect(self_target)
+            StatusEffect('Smite', [('damage_dice', DiceGroup([Die(8), Die(8)]))], 0).apply_effect(self_target)
             attack_method(target)
 
         super().__init__('Smite', False, effect, cooldown)

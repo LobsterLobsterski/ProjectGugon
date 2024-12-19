@@ -243,7 +243,24 @@ class Player(Creature):
         self.collision_layers = collision_layers
         self.direction = Direction.RIGHT
         self.combat_player = None
+        self.meta_currency = 10 # meta currency
 
+    def apply_upgrades(self, upgrades: list[tuple[str, int]]):
+        print('apply_upgrades:', upgrades)
+        for stat, level in upgrades:
+            if stat == 'max_health':
+                self.attributes['max_health'] += DiceGroup([self.attributes['hit_dice'] for _ in range(level)]).roll()
+                self.attributes['health'] = self.attributes['max_health']
+                return
+            
+            self.attributes[stat] += level
+        
+        print('apply_upgrades:', self.attributes.items())
+
+    def add_meta_currency(self, number: int):
+        print(f'gained {number} meta currency!')
+        self.meta_currency += number
+    
     def assign_combat_sprite(self, groups: tuple[pg.sprite.Group]):
         self.combat_player = CombatPlayer(self.game, groups, self.collision_layers, 0, 0, self.attributes, self.skills, self.class_table)
         self.class_table.init_attack_method(self.combat_player.attack_action)
@@ -364,6 +381,9 @@ class CombatPlayer(Player):
 
     def update(self):
         self.heal(self.attributes['regeneration'])
+
+    def add_meta_currency(self, number):
+        return super().add_meta_currency(number)
         
 
 class MapMob(GameObject):
@@ -477,7 +497,7 @@ class MapMob(GameObject):
 
     def kill(self):
         self.path = []
-        self.kill()
+        super().kill()
     
 
 class Goblin(MapMob):
