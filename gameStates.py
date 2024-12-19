@@ -610,7 +610,7 @@ class HubState(State):
     def __init__(self, game, clock, screen):
         super().__init__(game, clock, screen)
         # temp: should be 1
-        self.base_level = 2
+        self.base_level = 1
         self.player_upgrade_cost = 10
         self.currency = 0
 
@@ -694,6 +694,10 @@ class HubState(State):
         upgrade = self.character_upgrades[upgrade_idx]
         cost = self.player_upgrade_cost
 
+        if upgrade['level'] >= self.base_level:
+            print(f"Cannot upgrade {upgrade['name']}: Base level too low.")
+            return
+
         if self.currency >= cost:
             self.currency -= cost
             upgrade['level'] += 1
@@ -719,7 +723,14 @@ class HubState(State):
     def draw_upgrade_menu(self):
         for upgrade in self.character_upgrades:
             upgrade_rect = upgrade['rect']
-            color = (180, 180, 250) if upgrade["hovered"] else GRAY
+            
+            if upgrade['level'] >= self.base_level:
+                color = DARK_GRAY  # Locked state
+                locked_text = self.font.render("Base level too low", True, RED)
+                self.screen.blit(locked_text, (upgrade_rect.x, upgrade_rect.y - 20))
+            else:
+                color = (180, 180, 250) if upgrade["hovered"] else GRAY
+
             pg.draw.rect(self.screen, color, upgrade_rect)
             pg.draw.rect(self.screen, BLACK, upgrade_rect, 2)
 
