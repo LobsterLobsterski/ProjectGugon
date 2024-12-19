@@ -1,5 +1,6 @@
 import pygame as pg
 
+from Dice import Die
 from tickers import Skill
 
 class CombatLog:
@@ -73,19 +74,36 @@ class CombatLog:
         self.messages.append((f'{user_name} defends!', self.color))
         self.check_messages()
 
-    def add_skill_message(self, skill_report: dict, user_name: str, target_name=None):
+    def add_status_effect_message(self, skill_report: dict, user_name: str):
         skill_name = skill_report['name']
         skill_effects = skill_report['effects']
+        skill_target = skill_report['target']
+        is_self_skill = skill_target == user_name
 
         self.messages.append((f'{user_name} used {skill_name}!', self.color))
         for effect in skill_effects:
             stat = effect['stat'].replace('_', ' ').capitalize()
             value = effect['value']
 
-            self.messages.append((f'{stat} increased by {value}!', self.color))
+            change_word = 'increased' if isinstance(value, Die) or value > 0  else 'decreased'
+
+            if is_self_skill:
+                self.messages.append((f'{stat} {change_word} by {value}!', self.color))
+            else:
+                self.messages.append((f"{skill_target}'s {stat} {change_word} by {value}!", self.color))
 
         self.check_messages()
 
+    def add_attack_skill_message(self, skill_reports: dict[dict], user_name: str, target_name: str):
+            status_effect_reports = skill_reports['Status Effects']
+            attack_reports = skill_reports['Attacks']
+
+            for status_effect_report in status_effect_reports:
+                self.add_status_effect_message(status_effect_report, user_name)
+
+            for attack_report in attack_reports:
+                self.add_attack_message(attack_report, target_name)
+    
     def add_escape_message(self, user_name: str):
         raise NotImplementedError('add_escape_message not implmented yet!')
         self.messages.append((f'{user_name} defends!', self.color))

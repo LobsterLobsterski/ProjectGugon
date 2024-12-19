@@ -203,10 +203,7 @@ class Creature(GameObject):
         roll = self.attributes['damage_dice'].roll(is_crit)
         damage =  roll + self.attributes['damage']
         target_recieved_damage = target.receive_damage(damage)
-        self_received_damage = 0
-
-        if target.attributes['biteback']:
-            self_received_damage = self.receive_damage(target.attributes['biteback'])
+        self_received_damage = self.receive_damage(target.attributes['biteback'])
 
         return {'dealt': {'damage_roll': roll, 'damage_bonus': self.attributes['damage'], 'total_received': target_recieved_damage}, 'received': self_received_damage}
 
@@ -235,7 +232,6 @@ class Creature(GameObject):
         super().update()
         self.heal(self.attributes['regeneration'])
     
-
 class Player(Creature):
     def __init__(self, game, groups: Iterable, collision_layers: tuple, init_x_pos: int, init_y_pos: int, classTable: ClassTable):
         self.spritesheet = Spritesheet(MobType.Player)
@@ -247,6 +243,7 @@ class Player(Creature):
                             classTable
                             )
 
+        self.name = 'Player'
         self.collision_layers = collision_layers
         self.direction = Direction.RIGHT
         self.combat_player = None
@@ -270,7 +267,7 @@ class Player(Creature):
     
     def assign_combat_sprite(self, groups: tuple[pg.sprite.Group]):
         self.combat_player = CombatPlayer(self.game, groups, self.collision_layers, 0, 0, self.attributes, self.skills, self.class_table)
-        self.class_table.init_attack_method(self.combat_player.attack_action)
+        self.class_table.init_attack_method(self.combat_player.make_attack)
         self.level_up()
  
     def interact(self, interactable_layer: pg.sprite.Group):

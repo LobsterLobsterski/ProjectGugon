@@ -395,10 +395,10 @@ class CombatState(State):
                     if skill.target_is_self: 
                         skill_report = self.player.skill_action(skill, self.player)
 
-                        self.combat_log.add_skill_message(skill_report, 'Player')
+                        self.combat_log.add_status_effect_message(skill_report, 'Player')
 
-                        self.selected_skill = None 
-                        self.player_turn = False 
+                        self.selected_skill = None
+                        self.player_turn = False
 
         else:  # select a target for the skill
             for idx, enemy in enumerate(self.mobs_group):
@@ -409,9 +409,9 @@ class CombatState(State):
                     30
                 )
                 if enemy.rect.collidepoint(mouse_pos) or target_name_rect.collidepoint(mouse_pos):
-                    skill_report = self.player.skill_action(self.selected_skill, enemy)
+                    report_list = self.player.skill_action(self.selected_skill, enemy)
 
-                    self.combat_log.add_skill_message(skill_report, 'Player', enemy.name)
+                    self.combat_log.add_attack_skill_message(report_list, 'Player', enemy.name)
 
                     self.selected_skill = None
                     self.player_turn = False
