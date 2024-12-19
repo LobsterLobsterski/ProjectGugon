@@ -23,10 +23,10 @@ class Skill(Ticker):
         self.hovered = False
         self.target_is_self = target_is_self
 
-    def activate(self, target, self_target):
-        # print(self.name, 'was activated!', self.effect)
-        self.effect(target, self_target)
+    def activate(self, target, self_target) -> dict:
         self.timer = self.cooldown
+        return self.effect(target, self_target)
+        
     
     def __repr__(self):
         return f'Skill({self.name})'
@@ -42,7 +42,7 @@ class StatusEffect(Ticker):
         self.name = name
         self.effects = effects
     
-    def apply_effect(self, target):
+    def apply_effect(self, target) -> list[tuple[str, int]]:
         target.status_effects.append(self)
         # print('[StatusEffect] applying', self.effects, 'to', target)
         for effect in self.effects:
@@ -60,6 +60,8 @@ class StatusEffect(Ticker):
                 continue
 
             target.attributes[effect_stat] += stat_change
+        
+        return self.effects
 
     def remove_effect(self, target):
         for effect in self.effects:
@@ -87,8 +89,11 @@ class Distract(Skill):
     def __init__(self, cooldown=3):
         super().__init__('Distract', False, Distract.effect, cooldown)
 
-    def effect(target, *args):
-        StatusEffect('Distracted', [('defence', -10)], 0).apply_effect(target)
+    def effect(target, *args) -> dict:
+        effects = StatusEffect('Distracted', [('defence', -10)], 0).apply_effect(target)
+        return {'name': 'Distracted',
+                'effects': [{'stat': stat, 'value': value} for stat, value in effects]
+                }
 
 class Rampage(AttackSkill):
     def __init__(self, attack_method: callable, cooldown=5):
@@ -114,7 +119,10 @@ class Bless(Skill):
         super().__init__('Bless', True, Bless.effect, cooldown)
 
     def effect(target, *args):
-        StatusEffect('Blessed', [('attack', 2), ('damage_dice', Die(4))], 4).apply_effect(target)
+        effects = StatusEffect('Blessed', [('attack', 2), ('damage_dice', Die(4))], 4).apply_effect(target)
+        return {'name': 'Blessed',
+                'effects': [{'stat': stat, 'value': value} for stat, value in effects]
+                }
 
 class TripleSlash(AttackSkill):
     def __init__(self, attack_method: callable, cooldown=3):
@@ -129,7 +137,11 @@ class Heal(Skill):
         super().__init__('Heal', True, Heal.effect, cooldown)
 
     def effect(target, *args):
-        target.heal(DiceGroup([Die(8), Die(8)]).roll())
+        amount = DiceGroup([Die(8), Die(8)]).roll()
+        target.heal(amount)
+        return {'name': 'Heal',
+                'effects': {{'stat': 'health', 'value': amount}}
+                }
 
 class Agathys(Skill):
     def __init__(self, cooldown=20):
@@ -137,36 +149,50 @@ class Agathys(Skill):
 
     def effect(target, *args):
         # TEMP: damage needs to be swapped for biteback and health for temporary_health
-        StatusEffect('Armour of Agathys', [('temporary_health', 5), ('biteback', 5)], 5).apply_effect(target)
+        effects = StatusEffect('Armour of Agathys', [('temporary_health', 5), ('biteback', 5)], 5).apply_effect(target)
+        return {'name': 'Armour of Agathys',
+                'effects': [{'stat': stat, 'value': value} for stat, value in effects]
+                }
 
 class InvincibleConqueror(Skill):
     def __init__(self, cooldown=100):
         super().__init__('Invincible Conqueror', True, InvincibleConqueror.effect, cooldown)
 
     def effect(target, *args):
-        StatusEffect('Invincible Conqueror', [('resistance', 1), ('attack_number', 1), ('crit_range', -1)], 10).apply_effect(target)
+        effects = StatusEffect('Invincible Conqueror', [('resistance', 1), ('attack_number', 1), ('crit_range', -1)], 10).apply_effect(target)
+        return {'name': 'Invincible Conqueror',
+                'effects': [{'stat': stat, 'value': value} for stat, value in effects]
+                }
 
 class ShieldOfFaith(Skill):
     def __init__(self, cooldown=40):
         super().__init__('Shield of Faith', True, ShieldOfFaith.effect, cooldown)
 
     def effect(target, *args):
-        StatusEffect('Shield of Faith', [('defence', 2)], 10).apply_effect(target)
+        effects = StatusEffect('Shield of Faith', [('defence', 2)], 10).apply_effect(target)
+        return {'name': 'Shield of Faith',
+                'effects': [{'stat': stat, 'value': value} for stat, value in effects]
+                }
         
 class SacredWeapon(Skill):
     def __init__(self, cooldown=40):
         super().__init__('Sacred Weapon', True, SacredWeapon.effect, cooldown)
 
     def effect(target, *args):
-        StatusEffect('Sacred Weapon', [('damage_dice', Die(8))], 15).apply_effect(target)
+        effects = StatusEffect('Sacred Weapon', [('damage_dice', Die(8))], 15).apply_effect(target)
+        return {'name': 'Sacred Weapon',
+                'effects': [{'stat': stat, 'value': value} for stat, value in effects]
+                }
 
 class HolyNimbus(Skill):
     def __init__(self, cooldown=100):
         super().__init__('Holy Nimbus', True, HolyNimbus.effect, cooldown)
 
     def effect(target, *args):
-        # TEMP: damage needs to be swapped for passive_damage
-        StatusEffect('Holy Nimbus', [('defence', 2), ('armour', 2), ('passive_damage', 10)], 10).apply_effect(target)
+        effects = StatusEffect('Holy Nimbus', [('defence', 2), ('armour', 2), ('passive_damage', 10)], 10).apply_effect(target)
+        return {'name': 'Holy Nimbus',
+                'effects': [{'stat': stat, 'value': value} for stat, value in effects]
+                }
 
 list_of_all_skills = [Distract, 
                       Rampage, 

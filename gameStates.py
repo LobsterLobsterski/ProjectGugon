@@ -3,6 +3,7 @@ from math import ceil
 import sys
 import pygame as pg
 
+from CombatLog import CombatLog
 from Dice import Die
 from LevelUp import Paladin
 from map import Map, Viewport
@@ -216,6 +217,13 @@ class CombatState(State):
     def __init__(self, game, clock, screen, map_mob: Creature, player_first: bool):
         super().__init__(game, clock, screen)
         self.font = pg.font.Font(None, 36)
+
+        self.combat_log = CombatLog(
+            screen=self.screen,
+            rect=pg.Rect(WIDTH-350, HEIGHT-530, 300, 220),
+            max_messages=15
+        )
+
         self.player_turn = player_first
         self.map_mob = map_mob
         self.new()
@@ -362,11 +370,15 @@ class CombatState(State):
                 30
             )
             if enemy.rect.collidepoint(mouse_pos) or target_name_rect.collidepoint(mouse_pos):
-                self.player.attack_action(enemy)
+                attack_data = self.player.attack_action(enemy)
+                self.combat_log.add_attack_message(attack_data, enemy.name)
+
                 self.player_turn=False
        
     def execute_defend(self):
         self.player.defend_action()
+        self.combat_log.add_defend_message('Player')
+
         self.player_turn=False
 
     def execute_skill(self, mouse_pos):
@@ -381,7 +393,10 @@ class CombatState(State):
                 if skill_name_rect.collidepoint(mouse_pos) and not skill.is_ticking():
                     self.selected_skill = skill
                     if skill.target_is_self: 
-                        self.player.skill_action(skill, self.player)
+                        skill_report = self.player.skill_action(skill, self.player)
+
+                        self.combat_log.add_skill_message(skill_report, 'Player')
+
                         self.selected_skill = None 
                         self.player_turn = False 
 
@@ -394,16 +409,20 @@ class CombatState(State):
                     30
                 )
                 if enemy.rect.collidepoint(mouse_pos) or target_name_rect.collidepoint(mouse_pos):
-                    self.player.skill_action(self.selected_skill, enemy)
+                    skill_report = self.player.skill_action(self.selected_skill, enemy)
+
+                    self.combat_log.add_skill_message(skill_report, 'Player', enemy.name)
+
                     self.selected_skill = None
                     self.player_turn = False
     
     def execute_escape(self):
         print('Escapeing...')
-        self.exit_combat()
+        self.combat_log.add_message("You attempt to escape from combat!", (255, 255, 0))
+        # temp: add escape on screen and random chance to succeed
+        self.exit_combat(False)
         self.player_turn=False
 
-    
     ### drawing
     def draw(self):
         pg.display.set_caption("{:.2f}".format(self.clock.get_fps()))
@@ -416,6 +435,8 @@ class CombatState(State):
         self.draw_targets()
         self.draw_turn_depictor()
         self.draw_status_effect_boxes()
+        self.combat_log.draw()
+
         if self.end_screen_timer is not None:
             if self.player.is_alive:
                 self.draw_victory_message()
@@ -597,6 +618,9 @@ class CombatState(State):
                 enemy.update()
                 enemy.tickers_update()
                 enemy.fight()
+
+                # temp
+                # self.combat_log.add_enemy_message()
 
             self.player.update()
             self.player.tickers_update()

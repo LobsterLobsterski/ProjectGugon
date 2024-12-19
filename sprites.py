@@ -172,10 +172,10 @@ class Creature(GameObject):
     def get_level(self) -> int:
         return self.class_table.level
     
-    def receive_damage(self, damage: int):
+    def receive_damage(self, damage: int) -> int:
         damage = max(0, damage - self.attributes['armour'])
         if not damage:
-            return
+            return 0
         
         print(self.id, 'received', damage, 'damage!')
         if self.attributes['resistance']:
@@ -184,7 +184,7 @@ class Creature(GameObject):
         # print('\n\nth:', self.attributes['temporary_health'])
         self.attributes['temporary_health'] -= damage
         if self.attributes['temporary_health'] >= 0:
-            return
+            return 0
 
         # print('negative th:', self.attributes['temporary_health'])
         damage = self.attributes['temporary_health']*-1
@@ -195,13 +195,20 @@ class Creature(GameObject):
         if self.attributes['health'] <= 0:
             print(self.id, 'died!')
             self.die()
+
+        return damage
     
-    def deal_damage(self, target: Creature, is_crit: bool):
-        damage = self.attributes['damage_dice'].roll(is_crit) + self.attributes['damage']
-        target.receive_damage(damage)
+    def deal_damage(self, target: Creature, is_crit: bool) -> dict[str, int]:
+        # temp: split into each dice for better reporting
+        roll = self.attributes['damage_dice'].roll(is_crit)
+        damage =  roll + self.attributes['damage']
+        target_recieved_damage = target.receive_damage(damage)
+        self_received_damage = 0
 
         if target.attributes['biteback']:
-            self.receive_damage(target.attributes['biteback'])
+            self_received_damage = self.receive_damage(target.attributes['biteback'])
+
+        return {'dealt': {'damage_roll': roll, 'damage_bonus': self.attributes['damage'], 'total_received': target_recieved_damage}, 'received': self_received_damage}
 
     def die(self):
         print('Creature die!', self.__class__.__name__)
@@ -211,7 +218,7 @@ class Creature(GameObject):
             
     def heal(self, amount: int):
         if not amount:
-            return
+            return 
         
         print(self, 'healing for', amount)
         self.attributes['health'] = min(self.attributes['health']+amount, self.attributes['max_health'])
@@ -243,7 +250,7 @@ class Player(Creature):
         self.collision_layers = collision_layers
         self.direction = Direction.RIGHT
         self.combat_player = None
-        self.meta_currency = 10 # meta currency
+        self.meta_currency = 100 # meta currency
 
     def apply_upgrades(self, upgrades: list[tuple[str, int]]):
         print('apply_upgrades:', upgrades)
@@ -352,27 +359,33 @@ class CombatPlayer(Player):
         self.skills = skills
         self.attributes = attributes
     
-    def make_attack(self, target: Creature):
+    def make_attack(self, target: Creature) -> dict[str, any]:
         roll = Die(20).roll()
         is_crit = roll >= self.attributes['crit_range']
-        if roll+self.attributes['attack'] >= target.attributes['defence']:
-            self.deal_damage(target, is_crit)
-        else:
-            print('Attack on', target, 'missed!')
+        is_hit = roll+self.attributes['attack'] >= target.attributes['defence']
+        damage_roll_info = {'dealt': 0, 'received': 0}
+        if is_hit:
+            damage_roll_info = self.deal_damage(target, is_crit)
+
+        return {'is_hit': is_hit, 'is_crit': is_crit, 'roll': roll, 'attack_bonus': self.attributes['attack'], 'damage': damage_roll_info}
     
-    def attack_action(self, target: Creature):
+    def attack_action(self, target: Creature) -> list[dict]:
+        attack_data = []
         print('player attacked', target.name)
         for _ in range(self.attributes['attack_number']):
-            self.make_attack(target)
+            results = self.make_attack(target)
+            attack_data.append(results)
 
+        return results
+    
     def defend_action(self):
         print('player defended')
         s = StatusEffect("Defence", [('defence', 10)], 1)
         s.apply_effect(self)
 
-    def skill_action(self, selected_skill: Skill, target: Creature):
+    def skill_action(self, selected_skill: Skill, target: Creature) -> dict:
         print('player skilled!', selected_skill, 'target:', target)
-        selected_skill.activate(target, self)
+        return selected_skill.activate(target, self)
 
     def tickers_update(self):
         super().tickers_update()
