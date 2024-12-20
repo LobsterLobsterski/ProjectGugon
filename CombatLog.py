@@ -1,6 +1,6 @@
 import pygame as pg
 
-from Dice import Die
+from Dice import DiceGroup, Die
 from tickers import Skill
 
 class CombatLog:
@@ -85,10 +85,13 @@ class CombatLog:
         for effect in skill_effects:
             stat = effect['stat'].replace('_', ' ').capitalize()
             value = effect['value']
-
-            change_word = 'increased' if isinstance(value, Die) or value > 0  else 'decreased'
-            value = abs(value) if isinstance(value, int) else value
-
+            if isinstance(value, int):
+                change_word = 'increased' if value > 0  else 'decreased'
+                value = abs(value)
+                
+            elif isinstance(value, Die) or isinstance(value, DiceGroup):
+                change_word = 'increased'
+            
             self.messages.append((f"{skill_target}'s {stat} {change_word} by {value}!", self.color))
 
         self.check_messages()

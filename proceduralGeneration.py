@@ -233,7 +233,7 @@ class ProceduralGenerationType(Enum):
     '''
     BSP = BinarySpacePartition
     CA = CellularAutomata
-    DS = DrunkenStumble
+    # DS = DrunkenStumble
 
 
 def _pairwise(iterable: Iterable) -> Iterable:

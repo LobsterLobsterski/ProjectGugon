@@ -51,7 +51,7 @@ class StatusEffect(Ticker):
 
             effect_stat, stat_change = effect
 
-            if effect_stat == 'damage_dice': #its a list
+            if effect_stat == 'damage_dice': 
                 if isinstance(stat_change, Die):
                     target.attributes['damage_dice'].add_die(stat_change)
                 elif isinstance(stat_change, DiceGroup):
@@ -70,11 +70,15 @@ class StatusEffect(Ticker):
             effect_stat, effect_value = effect
 
             if effect_stat == 'damage_dice':
-                target.attributes['damage_dice'].remove(effect_value)
+                dice = effect_value.dice if isinstance(effect_value, DiceGroup) else [effect_value]
+                for die in dice:
+                    target.attributes['damage_dice'].remove(die)
+                    
                 continue
 
             if effect_stat == 'temporary_health':
                 target.attributes['temporary_health'] = 0
+                continue
 
             target.attributes[effect_stat] -= effect_value
 
@@ -111,8 +115,9 @@ class Smite(AttackSkill):
             status_effect_report = StatusEffect('Smite', [('damage_dice', DiceGroup([Die(8), Die(8)]))], 0).apply_effect(self_target)
             report['Status Effects'].append(status_effect_report)
 
-            report.append(attack_method(target))
-            
+            report['Attacks'].append(attack_method(target))
+
+            return report
 
         super().__init__('Smite', False, effect, cooldown)
 

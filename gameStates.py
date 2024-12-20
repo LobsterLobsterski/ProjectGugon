@@ -1,4 +1,5 @@
 from math import ceil
+import random
 import sys
 import pygame as pg
 
@@ -100,8 +101,9 @@ class WorldMapState(State):
         self.player_layer = pg.sprite.Group()
         self.mob_layer = pg.sprite.Group()
 
+        map_type = random.choice(list(ProceduralGenerationType))
         self.map = Map((self.all_sprites, self.background_layer),
-                       (64, 48), map_generator_type=ProceduralGenerationType.CA)
+                       (64, 48), map_generator_type=map_type)
         
         player_pos_x, player_pos_y = self.map.get_initial_player_pos()
         self.player = Player(self.game, (self.all_sprites, self.player_layer), 

@@ -1,3 +1,4 @@
+from __future__ import annotations
 import random
 
 
@@ -22,8 +23,8 @@ class DiceGroup:
     def add_die(self, die: Die):
         self.dice.append(die)
     
-    def add_dice(self, dice: list[Die]):
-        self.dice += dice
+    def add_dice(self, dice_group: DiceGroup):
+        self.dice += dice_group.dice
 
     def remove(self, die: Die):
         self.dice.remove(die)
