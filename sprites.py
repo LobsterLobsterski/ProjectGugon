@@ -102,16 +102,17 @@ class GameObject(pg.sprite.Sprite):
         return BehaviourTree(self, behaviour_tree)
 
 class Creature(GameObject):
-    def __init__(self, game, groups: Iterable, image: pg.Surface, x: int, y: int, health: int, damage: int, attack: int, defence: int, armour: int, dice: DiceGroup, class_table: ClassTable):
+    def __init__(self, game, groups: Iterable, image: pg.Surface, x: int, y: int, health: int, damage: int, attack: int, defence: int, armour: int, damage_dice: DiceGroup, class_table: ClassTable):
         super().__init__(groups, image, x, y)
         self.game = game
+        print(self.id, health, damage, attack, defence, armour, damage_dice)
         self.attributes = {
             'max_health': health,
             'health': health,
             'temporary_health': 0,
-            'hit_die': Die(8), # temp: depends on class
+            'hit_die': Die(8), # temp: should depend on class
             'damage': damage,
-            'damage_dice': dice,
+            'damage_dice': damage_dice, # temp: should depend on class/items
             'attack': attack,
             'crit_range': 20,
             'attack_number': 1, # number of attacks made per attack action
@@ -247,7 +248,7 @@ class Player(Creature):
         super().__init__(game, groups, 
                             self.spritesheet.image_at((0, 0)),
                             init_x_pos, init_y_pos,
-                            100, 10, 10000, 3000, 1, DiceGroup([Die(8)]),
+                            50, 5, 7, 18, 1, DiceGroup([Die(8)]),
                             classTable
                             )
 
@@ -551,7 +552,9 @@ class CombatSkeleton(Creature):
         # temp: af
         self.mobs = groups[0]
         super().__init__(game, groups, self.spritesheet.get_sprite(random.randint(0, 2), 0), 
-                         0, 0, 30, 10, 20, 30, 5, DiceGroup([Die(6)]), SkeletonClass(self.attack_action))
+                         0, 0, 
+                         13, 3, 5, 13, 0, DiceGroup([Die(6)]), 
+                         SkeletonClass(self.make_attack))
         
         print('sheleton', CombatSkeleton.skeleton_counter, 'has ', self.attributes['health'], self.attributes['max_health'])
         self.image = pg.transform.scale(self.image, (128, 128))
@@ -595,6 +598,7 @@ class CombatSkeleton(Creature):
 
     ### actions
     def make_attack(self, target: Creature) -> dict[str, any]:
+        print('skeleton attack bonus:', self.attributes['attack'])
         roll = Die(20).roll()
         is_crit = roll >= self.attributes['crit_range']
         is_hit = roll+self.attributes['attack'] >= target.attributes['defence']

@@ -262,7 +262,7 @@ class CombatState(State):
             raise NotImplementedError(f'[generate_mob] generation of {mob_type} not implemented yet!')
     
     def generate_encounter(self, mob_type: MobType):
-        num_of_enemies = 1#random.randint(1, 4)
+        num_of_enemies = random.randint(1, 4)
         screen_width_per_enemy = WIDTH//num_of_enemies
         enemy_width = 150
         
