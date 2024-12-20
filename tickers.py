@@ -94,13 +94,14 @@ class StatusEffect(Ticker):
 class Rampage(AttackSkill):
     def __init__(self, attack_method: callable, cooldown=5):
         def effect(target, self_target) -> list[dict]:
+            print('rampage used: target, self_target', target, self_target)
             report = {'name': 'Rampage', 'Status Effects': [], 'Attacks': []}
 
             status_effect_1 = StatusEffect('Out of Position: Defence', [('defence', -5)], 3)
             status_effect_2 = StatusEffect('Out of Position: Attack', [('attack', -5)], 0)
 
-            raport1 = status_effect_1.apply_effect(target)
-            raport2 = status_effect_2.apply_effect(target)
+            raport1 = status_effect_1.apply_effect(self_target)
+            raport2 = status_effect_2.apply_effect(self_target)
 
             self_target.status_effects.append(status_effect_1)
             self_target.status_effects.append(status_effect_2)

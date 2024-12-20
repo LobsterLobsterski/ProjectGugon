@@ -384,7 +384,7 @@ class CombatPlayer(Player):
     def defend_action(self):
         print('player defended')
         status_effect = StatusEffect("Defence", [('defence', 10)], 1)
-        self.status_effects.append(self)
+        self.status_effects.append(status_effect)
         return status_effect.apply_effect(self)
 
     def skill_action(self, selected_skill: Skill, target: Creature) -> dict:
@@ -615,8 +615,8 @@ class CombatSkeleton(Creature):
     def defend_action(self, target, *args):
         print('skeleton defended')
         status_effect = StatusEffect("Defence", [('defence', 10)], 1)
-        self.status_effects.append(target)
-        return status_effect.apply_effect(target)
+        self.status_effects.append(status_effect)
+        return status_effect.apply_effect(self)
 
     ###
 
