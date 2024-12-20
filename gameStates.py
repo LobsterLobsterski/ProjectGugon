@@ -732,6 +732,8 @@ class HubState(State):
     def draw(self):
         self.screen.fill(DARK_GRAY)
 
+        self.draw_currency_display()
+
         if self.upgrades_visible:
             self.draw_upgrade_menu()
         else:
@@ -743,6 +745,10 @@ class HubState(State):
             
         pg.display.flip()
 
+    def draw_currency_display(self):
+        currency_text = self.font.render(f"Meta Currency: {self.currency}", True, WHITE)
+        self.screen.blit(currency_text, (20, 20))
+    
     def draw_upgrade_menu(self):
         for upgrade in self.character_upgrades:
             upgrade_rect = upgrade['rect']
