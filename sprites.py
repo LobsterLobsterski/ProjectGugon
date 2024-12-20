@@ -109,7 +109,7 @@ class Creature(GameObject):
             'max_health': health,
             'health': health,
             'temporary_health': 0,
-            'hit_dice': Die(8), # temp: depends on class
+            'hit_die': Die(8), # temp: depends on class
             'damage': damage,
             'damage_dice': dice,
             'attack': attack,
@@ -139,7 +139,7 @@ class Creature(GameObject):
             self.level_up()
 
     def level_up(self):
-        hp_increase = self.attributes['hit_dice'].roll()
+        hp_increase = self.attributes['hit_die'].roll()
         self.attributes['max_health'] += hp_increase
         self.attributes['health'] += hp_increase
 
@@ -232,6 +232,15 @@ class Creature(GameObject):
         super().update()
         self.heal(self.attributes['regeneration'])
     
+# temp: for later
+class CombatCrature(Creature):
+    def __init__(self, game, groups, image, x, y, health, damage, attack, defence, armour, dice, class_table):
+        super().__init__(game, groups, image, x, y, health, damage, attack, defence, armour, dice, class_table)
+
+    def attack_action(self):
+        pass
+
+
 class Player(Creature):
     def __init__(self, game, groups: Iterable, collision_layers: tuple, init_x_pos: int, init_y_pos: int, classTable: ClassTable):
         self.spritesheet = Spritesheet(MobType.Player)
@@ -247,25 +256,22 @@ class Player(Creature):
         self.collision_layers = collision_layers
         self.direction = Direction.RIGHT
         self.combat_player = None
-        self.meta_currency = 100 # meta currency
+        self.meta_currency = 0 # meta currency
 
     def apply_upgrades(self, upgrades: list[tuple[str, int]]):
-        print('apply_upgrades:', upgrades)
         for stat, level in upgrades:
             if stat == 'max_health':
-                self.attributes['max_health'] += DiceGroup([self.attributes['hit_dice'] for _ in range(level)]).roll()
+                self.attributes['max_health'] += DiceGroup([self.attributes['hit_die'] for _ in range(level)]).roll()
                 self.attributes['health'] = self.attributes['max_health']
-                return
+                continue
             
             self.attributes[stat] += level
-        
-        print('apply_upgrades:', self.attributes.items())
 
     def add_meta_currency(self, number: int):
         print(f'gained {number} meta currency!')
         self.meta_currency += number
     
-    def assign_combat_sprite(self, groups: tuple[pg.sprite.Group]):
+    def assign_combat_sprite(self, groups: tuple[pg.sprite.Group] = ()):
         self.combat_player = CombatPlayer(self.game, groups, self.collision_layers, 0, 0, self.attributes, self.skills, self.class_table)
         self.class_table.init_attack_method(self.combat_player.make_attack)
         self.level_up()
@@ -346,6 +352,7 @@ class Player(Creature):
         super().tickers_update()
         for s in self.skills:
             s.update()   
+
 
 class CombatPlayer(Player):
     # should probably inherit from Player and then rewrite code so that CombatPlayer receives damage into Player+
@@ -541,7 +548,8 @@ class CombatSkeleton(Creature):
     skeleton_counter=0
     def __init__(self, game, groups, player: CombatPlayer, centre: tuple[int, int]):
         self.spritesheet = Spritesheet(MobType.Skeleton)
-        self.mobs = groups[1]
+        # temp: af
+        self.mobs = groups[0]
         super().__init__(game, groups, self.spritesheet.get_sprite(random.randint(0, 2), 0), 
                          0, 0, 30, 10, 20, 30, 5, DiceGroup([Die(6)]), SkeletonClass(self.attack_action))
         

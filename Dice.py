@@ -36,5 +36,5 @@ class DiceGroup:
             else:
                 buckets[die.size] += 1
         
-        return ' and '.join([f'{number}d{die_size}' for die_size, number in buckets])
+        return ' and '.join([f'{number}d{die_size}' for die_size, number in buckets.items()])
         

@@ -109,6 +109,7 @@ class WorldMapState(State):
                              (self.background_layer, self.mob_layer), 
                              player_pos_x, player_pos_y,
                              Paladin())
+        self.player.assign_combat_sprite()
         
         self.map.assign_map_exit((player_pos_x, player_pos_y))
         MapExit(game, (self.all_sprites, self.interactable_layer), self.map.exit[0], self.map.exit[1])
@@ -226,12 +227,11 @@ class CombatState(State):
 
         self.player_turn = player_first
         self.map_mob = map_mob
-        self.new()
         self.end_screen_timer = None
         self.encounter_experience = 0
 
-        if not self.game.player.combat_player:
-            self.game.player.assign_combat_sprite((self.all_sprites))
+        self.mobs_group = pg.sprite.Group()
+
         self.player = self.game.player.combat_player
 
         self.generate_encounter(map_mob.mob_type)
@@ -255,7 +255,7 @@ class CombatState(State):
 
     def generate_mob(self, mob_type: MobType, mob_centre: tuple[int, int]):
         if mob_type == MobType.Skeleton:
-            return CombatSkeleton(self.game, (self.all_sprites, self.mobs_group), self.player, mob_centre)
+            return CombatSkeleton(self.game, (self.mobs_group, ), self.player, mob_centre)
         else:
             raise NotImplementedError(f'[generate_mob] generation of {mob_type} not implemented yet!')
     
@@ -269,11 +269,7 @@ class CombatState(State):
             enemy_leftmost_pos = enemy_midpoint-enemy_width//2
             mob_pos = pg.Rect(enemy_leftmost_pos, 100, enemy_width, 50)
 
-            self.generate_mob(mob_type, mob_pos.center)
-        
-    def new(self):
-        self.all_sprites = pg.sprite.Group()
-        self.mobs_group = pg.sprite.Group()
+            self.generate_mob(mob_type, mob_pos.center)    
 
     def run(self):
         while True:
@@ -615,10 +611,11 @@ class CombatState(State):
                 enemy.receive_damage(self.player.attributes['passive_damage'])
                 self.player.receive_damage(enemy.attributes['passive_damage'])
 
-                enemy.update()
-                enemy.tickers_update()
                 enemy_report = enemy.fight()
                 self.combat_log.add_enemy_message(enemy_report, enemy.name, enemy.target.name)
+
+                enemy.update()
+                enemy.tickers_update()
 
             self.player.update()
             self.player.tickers_update()
