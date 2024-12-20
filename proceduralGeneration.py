@@ -162,14 +162,62 @@ class CellularAutomata:
             
 
         return grid
-
-    def create_map(tile_width: int, tile_height: int, sprite_groups: Iterable[Group], debug=False):
+    
+    def generate_map(tile_width, tile_height):
         noise_grid = CellularAutomata.generate_noise_grid(tile_width, tile_height, noise_density=50)
         map = CellularAutomata.run_cellular_automata(noise_grid, iterations=2)
+        return CellularAutomata._remove_unreachable_areas(map)
+    
+    def create_map(tile_width: int, tile_height: int, sprite_groups: Iterable[Group], debug=False):
+        map = CellularAutomata.generate_map(tile_width, tile_height)
+
+        if not CellularAutomata._map_is_all_walls(map):
+            map = CellularAutomata.generate_map(tile_width, tile_height)
+
         _encase_map(map, tile_width, tile_height)
         _create_walls(map, sprite_groups)
-
+        
         return map, None
+    
+    def _map_is_all_walls(map: list[list[TileType]]):
+        flattened = sum(map, [])
+        return all([tile==TileType.Wall for tile in flattened])
+    
+    def _remove_unreachable_areas(map: list[list[TileType]]) -> list[list[TileType]]:
+        def is_within_bounds(x, y):
+            return 0 <= x < len(map[0]) and 0 <= y < len(map)
+
+        def flood_fill(x, y, visited):
+            stack = [(x, y)]
+            region = []
+            while stack:
+                cx, cy = stack.pop()
+                if (cx, cy) in visited:
+                    continue
+                visited.add((cx, cy))
+                region.append((cx, cy))
+                for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:  # Cardinal directions
+                    nx, ny = cx + dx, cy + dy
+                    if is_within_bounds(nx, ny) and map[ny][nx] == TileType.Floor and (nx, ny) not in visited:
+                        stack.append((nx, ny))
+            return region
+
+        visited = set()
+        regions = []
+        for y in range(len(map)):
+            for x in range(len(map[0])):
+                if map[y][x] == TileType.Floor and (x, y) not in visited:
+                    region = flood_fill(x, y, visited)
+                    regions.append(region)
+
+        if regions:
+            largest_region = max(regions, key=len)
+            for region in regions:
+                if region != largest_region:
+                    for x, y in region:
+                        map[y][x] = TileType.Wall
+
+        return map
 
 
 class DrunkenStumble:

@@ -1,4 +1,3 @@
-from enum import Enum
 from math import ceil
 import sys
 import pygame as pg
@@ -622,8 +621,10 @@ class CombatState(State):
             self.player_turn = True
             self.selected_action = None
 
+
 class MenuState:
     pass
+
 
 class HubState(State):
     def __init__(self, game, clock, screen):
@@ -770,4 +771,3 @@ class HubState(State):
     
     def store_meta_currency(self, number: int):
         self.currency += number 
-

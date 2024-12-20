@@ -1,10 +1,9 @@
 import pygame as pg
 
 from Dice import Die
-from GameState import GameState
 from gameStates import CombatState, HubState, LevelUpState, WorldMapState
 from settings import HEIGHT, TITLE, WIDTH
-from sprites import CombatPlayer, Creature, MobType
+from sprites import Creature
 
 
 class Game:

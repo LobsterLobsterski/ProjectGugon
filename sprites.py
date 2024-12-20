@@ -8,7 +8,7 @@ from AI.BehaviourTree import BehaviourTree
 from Dice import DiceGroup, Die
 from LevelUp import ClassTable, SkeletonClass
 from Pathfinding import Pathfinder
-from settings import BLACK, GRAY, GREEN, GRIDHEIGHT, GRIDWIDTH, RED, TILESIZE
+from settings import GREEN, GRIDHEIGHT, GRIDWIDTH, RED, TILESIZE
 from tickers import Skill, StatusEffect
 from utils import get_squared_distance
 
