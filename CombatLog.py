@@ -21,10 +21,10 @@ class CombatLog:
         self.color = (255, 255, 255)
 
     def check_messages(self):
-        if len(self.messages) > self.max_messages:
+        while len(self.messages) > self.max_messages:
             self.messages.pop(0)
 
-    def add_attack_message(self, attack_data: dict, target_name: str, color=None):
+    def add_attack_message(self, attack_data: dict, user_name:str, target_name: str, color=None):
         """
         Add a new message to the log.
 
@@ -51,12 +51,12 @@ class CombatLog:
         damage_color = color
 
         if is_hit:
-            hit_message = f'Player attacked {target_name} and {"critically" if is_crit else "" } hit! ({attack_roll}+{attack_bonus})!'
+            hit_message = f'{user_name} attacked {target_name} and {"critically" if is_crit else "" } hit! ({attack_roll}+{attack_bonus})!'
             if is_crit:
                 hit_color = (102, 255, 0)
                 damage_color = (102, 255, 0)
 
-            damage_message = f'Player dealt {total} ({damage_roll}+{damage_bonus}-target_armour)!'
+            damage_message = f'{user_name} dealt {total} ({damage_roll}+{damage_bonus}-target_armour)!'
             if damage_received:
                 damage_message = f'{damage_message} and received {damage_received} from biteback!'
 
@@ -64,8 +64,8 @@ class CombatLog:
             self.messages.append((damage_message, damage_color))
 
         else:
-            hit_color = (0, 0, 255)
-            self.messages.append((f'Player attacked {target_name} and missed! ({attack_roll}+{attack_bonus})', hit_color))
+            hit_color = (120, 120, 255)
+            self.messages.append((f'{user_name} attacked {target_name} and missed! ({attack_roll}+{attack_bonus})', hit_color))
 
 
         self.check_messages()
@@ -74,41 +74,57 @@ class CombatLog:
         self.messages.append((f'{user_name} defends!', self.color))
         self.check_messages()
 
-    def add_status_effect_message(self, skill_report: dict, user_name: str):
+    def add_status_effect_message(self, skill_report: dict, receiver_name: str, is_standalone_skill=True):
         skill_name = skill_report['name']
         skill_effects = skill_report['effects']
         skill_target = skill_report['target']
-        is_self_skill = skill_target == user_name
 
-        self.messages.append((f'{user_name} used {skill_name}!', self.color))
+        if is_standalone_skill:
+            self.messages.append((f'{receiver_name} used {skill_name}!', self.color))
+        
         for effect in skill_effects:
             stat = effect['stat'].replace('_', ' ').capitalize()
             value = effect['value']
 
             change_word = 'increased' if isinstance(value, Die) or value > 0  else 'decreased'
+            value = abs(value) if isinstance(value, int) else value
 
-            if is_self_skill:
-                self.messages.append((f'{stat} {change_word} by {value}!', self.color))
-            else:
-                self.messages.append((f"{skill_target}'s {stat} {change_word} by {value}!", self.color))
+            self.messages.append((f"{skill_target}'s {stat} {change_word} by {value}!", self.color))
 
         self.check_messages()
 
     def add_attack_skill_message(self, skill_reports: dict[dict], user_name: str, target_name: str):
+            skill_name = skill_reports['name']
             status_effect_reports = skill_reports['Status Effects']
             attack_reports = skill_reports['Attacks']
 
+            self.messages.append((f'{user_name} used {skill_name} on {target_name}!', self.color))
             for status_effect_report in status_effect_reports:
-                self.add_status_effect_message(status_effect_report, user_name)
+                self.add_status_effect_message(status_effect_report, user_name, is_standalone_skill=False)
 
             for attack_report in attack_reports:
-                self.add_attack_message(attack_report, target_name)
+                self.add_attack_message(attack_report, user_name, target_name)
     
     def add_escape_message(self, user_name: str):
-        raise NotImplementedError('add_escape_message not implmented yet!')
-        self.messages.append((f'{user_name} defends!', self.color))
+        self.messages.append((f'{user_name} tries to escape!', self.color))
         self.check_messages()
-    
+
+    def add_enemy_message(self, report: dict, enemy_name: str, target_name: str):
+        if 'is_hit' in report:
+            # normal attack
+            self.add_attack_message(report, enemy_name, target_name)
+
+        elif 'Status Effects' in report:
+            # skill
+            self.add_attack_skill_message(report, enemy_name, target_name)
+
+        elif 'effects' in report:
+            # status effect
+            self.add_status_effect_message(report, enemy_name)
+
+        else:
+            raise NotImplementedError(f'{report.keys()}: such raport type is not implemented!')
+                  
     def draw(self):
         """
         Draw the combat log onto the screen.

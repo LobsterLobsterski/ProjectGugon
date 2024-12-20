@@ -360,7 +360,7 @@ class CombatPlayer(Player):
         roll = Die(20).roll()
         is_crit = roll >= self.attributes['crit_range']
         is_hit = roll+self.attributes['attack'] >= target.attributes['defence']
-        damage_roll_info = {'dealt': 0, 'received': 0}
+        damage_roll_info = {'dealt': {'damage_roll': 0, 'damage_bonus': 0, 'total_received': 0}, 'received': 0}
         if is_hit:
             damage_roll_info = self.deal_damage(target, is_crit)
 
@@ -568,11 +568,10 @@ class CombatSkeleton(Creature):
         self.bahaviour_tree = self.init_behaviour(behaviour_tree)
 
 
-    def fight(self):
-        print('\n')
+    def fight(self) -> dict:
         action = self.bahaviour_tree.find_action()
-        action(self.target, self)
-    
+        return action(self.target, self)
+
     ### conditions
     def is_alone(self):
         return len(self.mobs) == 1
@@ -586,18 +585,27 @@ class CombatSkeleton(Creature):
     ###
 
     ### actions
-    def attack_action(self, target, *args):
-        print('skeleton attacked', target)
+    def make_attack(self, target: Creature) -> dict[str, any]:
+        roll = Die(20).roll()
+        is_crit = roll >= self.attributes['crit_range']
+        is_hit = roll+self.attributes['attack'] >= target.attributes['defence']
+        damage_roll_info = {'dealt': {'damage_roll': 0, 'damage_bonus': 0, 'total_received': 0}, 'received': 0}
+        if is_hit:
+            damage_roll_info = self.deal_damage(target, is_crit)
+
+        return {'is_hit': is_hit, 'is_crit': is_crit, 'roll': roll, 'attack_bonus': self.attributes['attack'], 'damage': damage_roll_info}
+    
+    def attack_action(self, target: Creature, *args) -> list[dict]:
+        attack_data = []
         for _ in range(self.attributes['attack_number']):
-            if self.attributes['attack']+random.randint(1, 20) > target.attributes['defence']:
-                target.receive_damage(self.attributes['damage'])
-            else:
-                print('Attack on', target, 'missed!')
+            results = self.make_attack(target)
+            attack_data.append(results)
+
+        return results
 
     def defend_action(self, target, *args):
         print('skeleton defended')
-        s = StatusEffect("Defence", [('defence', 10)], 1)
-        s.apply_effect(target)
+        return StatusEffect("Defence", [('defence', 10)], 1).apply_effect(target)
 
     ###
 

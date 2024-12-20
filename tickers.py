@@ -90,16 +90,16 @@ class StatusEffect(Ticker):
 class Rampage(AttackSkill):
     def __init__(self, attack_method: callable, cooldown=5):
         def effect(target, self_target) -> list[dict]:
-            reports = {'Status Effects': [], 'Attacks': []}
+            report = {'name': 'Rampage', 'Status Effects': [], 'Attacks': []}
 
-            status_effect_report_1 = StatusEffect('Out of Position', [('defence', -20)], 3).apply_effect(self_target)
-            status_effect_report_2 = StatusEffect('Out of Position', [('attack', -15)], 0).apply_effect(self_target)
+            status_effect_report_1 = StatusEffect('Out of Position: Defence', [('defence', -5)], 3).apply_effect(self_target)
+            status_effect_report_2 = StatusEffect('Out of Position: Attack', [('attack', -5)], 0).apply_effect(self_target)
 
-            reports['Status Effects'] = [status_effect_report_1, status_effect_report_2]
+            report['Status Effects'] = [status_effect_report_1, status_effect_report_2]
             for _ in range(3):
-                reports['Attacks'].append(attack_method(target))
+                report['Attacks'].append(attack_method(target))
             
-            return reports
+            return report
             
 
         super().__init__('Rampage', False, effect, cooldown)
@@ -107,19 +107,23 @@ class Rampage(AttackSkill):
 class Smite(AttackSkill):
     def __init__(self, attack_method: callable, cooldown=4):
         def effect(target, self_target):
-            StatusEffect('Smite', [('damage_dice', DiceGroup([Die(8), Die(8)]))], 0).apply_effect(self_target)
-            attack_method(target)
+            report = {'name': 'Smite', 'Status Effects': [], 'Attacks': []}
+            status_effect_report = StatusEffect('Smite', [('damage_dice', DiceGroup([Die(8), Die(8)]))], 0).apply_effect(self_target)
+            report['Status Effects'].append(status_effect_report)
+
+            report.append(attack_method(target))
+            
 
         super().__init__('Smite', False, effect, cooldown)
 
 class TripleSlash(AttackSkill):
     def __init__(self, attack_method: callable, cooldown=3):
         def effect(target, *args) -> dict[dict]:
-            reports = {'Status Effects': [], 'Attacks': []}
+            report = {'name': 'Triple Slash', 'Status Effects': [], 'Attacks': []}
             for _ in range(3):
-                reports['Attacks'].append(attack_method(target))
+                report['Attacks'].append(attack_method(target))
 
-            return reports
+            return report
         
         super().__init__('Triple Slash', False, effect, cooldown)
 

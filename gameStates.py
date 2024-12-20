@@ -221,7 +221,7 @@ class CombatState(State):
         self.combat_log = CombatLog(
             screen=self.screen,
             rect=pg.Rect(WIDTH-350, HEIGHT-530, 300, 220),
-            max_messages=15
+            max_messages=11
         )
 
         self.player_turn = player_first
@@ -371,7 +371,7 @@ class CombatState(State):
             )
             if enemy.rect.collidepoint(mouse_pos) or target_name_rect.collidepoint(mouse_pos):
                 attack_data = self.player.attack_action(enemy)
-                self.combat_log.add_attack_message(attack_data, enemy.name)
+                self.combat_log.add_attack_message(attack_data, 'Player', enemy.name)
 
                 self.player_turn=False
        
@@ -418,7 +418,7 @@ class CombatState(State):
     
     def execute_escape(self):
         print('Escapeing...')
-        self.combat_log.add_message("You attempt to escape from combat!", (255, 255, 0))
+        self.combat_log.add_escape_message('Player')
         # temp: add escape on screen and random chance to succeed
         self.exit_combat(False)
         self.player_turn=False
@@ -617,10 +617,8 @@ class CombatState(State):
 
                 enemy.update()
                 enemy.tickers_update()
-                enemy.fight()
-
-                # temp
-                # self.combat_log.add_enemy_message()
+                enemy_report = enemy.fight()
+                self.combat_log.add_enemy_message(enemy_report, enemy.name, enemy.target.name)
 
             self.player.update()
             self.player.tickers_update()
