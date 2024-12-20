@@ -1,4 +1,5 @@
 from math import inf
+import random
 from Dice import Die
 from tickers import Agathys, AttackSkill, Bless, Distract, Heal, HolyNimbus, InvincibleConqueror, Rampage, SacredWeapon, ShieldOfFaith, Skill, Smite, StatusEffect, TripleSlash, get_epic_boons, get_random_skills
 
@@ -149,7 +150,7 @@ class DevotionPaladin(ClassTable):
 
         self.level_features_dict = {
           1: [ShieldOfFaith(), SacredWeapon()],
-          2: [StatusEffect('Aura of Devotion', [('defence', 1), ('armour', 1), ('temporary_health', 10)], -1)],
+          2: [StatusEffect('Aura of Devotion', [('defence', 1), ('armour', 1), ('temporary_health', 10)], -1)], # temp: the temp hp needs to reapply at the start of battle
           3: [StatusEffect('Smite of Protection', [('defence', 1), ('armour', 1)], -1)], # temp: needs to buff smite to also give defence +2 when used for 5 turns
           4: [HolyNimbus()]
         }
@@ -162,23 +163,23 @@ class SkeletonClass(ClassTable):
                 1: [Distract()
                     ,Rampage(attack_method)
                     ],
-                2: ['Fighting style', 'Smite'],
-                # 3: ['Subclass'],
-                # 4: ['Random card'],
-                # 5: ['Double Attack', ('attack', 1)],
-                # 6: ['Aura of Protection'],
-                # 7: ['Subclass feature'],
-                # 8: ['Random'],
-                # 9: ['Random', ('attack', 1)],
-                # 10: ['Aura of Courage'],
-                # 11: ['Radiant strikes'],
-                # 12: ['Random'],
-                # 13: ['Random', ('attack', 1)],
-                # 14: ['Nothing'],
-                # 15: ['Heal'],
-                # 16: ['Subclass feature'],
-                # 17: ['Random', ('attack', 1)],
-                # 18: ['Aura Master'],
-                # 19: ['Epic Boon'],
-                # 20: ['Subclass Feature']
+                2: [StatusEffect('Hard Bones', [('armour', 2)], -1)],
+                3: [StatusEffect('Undeadly Vigour', [('regeneration', 2)], -1)],
+                4: [StatusEffect('Necrotic Strikes', [('damage_dice', Die(6))], -1)],
+                5: [StatusEffect('Deadly Strikes', [('crit_range', -1)], -1), ('attack', 1)],
+                6: [StatusEffect('Hardened bones', [('armour', 1)], -1), ('attack', 1), ('attack_number', 1)],
+                7: [StatusEffect('Mastery over Weaponry', [('attack', 5)], -1)],
+                8: [StatusEffect('Aura of Undeath', [('passive_damage', 3)], -1)],
+                9: [('attack', 1)],
+                10: [StatusEffect('Mighty Constitution', [('max_health', 20)], -1)],
+                11: [random.choice(get_epic_boons())],
+                12: [StatusEffect('Higher Undeadly Vigour', [('regeneration', 3)], -1)],
+                13: [('attack', 2), ('damage', 5)],
+                14: [StatusEffect('Magical Weaponry', [('damage_dice', Die(8))], -1)],
+                15: [StatusEffect('Mightier Constitution', [('max_health', 40)], -1)],
+                16: [StatusEffect('Deadlier Strikes', [('crit_range', -2)], -1)],
+                17: [StatusEffect('Thorny carapace', [('biteback', 4)], -1)],
+                18: [random.choice(get_epic_boons())],
+                19: [('attack_number', 1)],
+                20: [random.choice(get_epic_boons())]
             }

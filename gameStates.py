@@ -256,7 +256,8 @@ class CombatState(State):
 
     def generate_mob(self, mob_type: MobType, mob_centre: tuple[int, int]):
         if mob_type == MobType.Skeleton:
-            return CombatSkeleton(self.game, (self.mobs_group, ), self.player, mob_centre)
+            mob_level = self.game.current_floor
+            return CombatSkeleton(self.game, (self.mobs_group, ), self.player, mob_centre, mob_level)
         else:
             raise NotImplementedError(f'[generate_mob] generation of {mob_type} not implemented yet!')
     

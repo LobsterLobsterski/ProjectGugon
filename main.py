@@ -14,6 +14,7 @@ class Game:
         self.clock = pg.time.Clock()
         pg.key.set_repeat(100, 100)
         self.map_state = WorldMapState(self, self.clock, self.screen)
+        self.current_floor = 1
         self.hub_state = HubState(self, self.clock, self.screen)
 
         self.player = self.map_state.player
@@ -33,6 +34,7 @@ class Game:
         self.run()
 
     def enter_new_level(self):
+        self.current_floor += 1
         self.map_state = WorldMapState(self, self.clock, self.screen)
         # temp: arbitrary number
         self.player.add_experience(600)
@@ -40,6 +42,7 @@ class Game:
         self.enter_world_map()
 
     def return_to_dungeon(self):
+        self.current_floor = 1
         upgrades = self.hub_state.get_character_upgrades()
         self.map_state = WorldMapState(self, self.clock, self.screen)
         self.player = self.map_state.player

@@ -164,7 +164,7 @@ class Creature(GameObject):
             elif isinstance(gain, StatusEffect):
                 self.passive_skills.append(gain)
                 gain.apply_effect(self)
-            
+
             elif isinstance(gain, tuple):
                 stat, amount = gain
                 self.attributes[stat] += amount
@@ -224,7 +224,6 @@ class Creature(GameObject):
         for s in self.status_effects:
             s.update()
             if not s.is_ticking():
-                # print('[tickers_update] removing', s)
                 self.status_effects.remove(s)
                 s.remove_effect(self)
 
@@ -384,8 +383,9 @@ class CombatPlayer(Player):
     
     def defend_action(self):
         print('player defended')
-        s = StatusEffect("Defence", [('defence', 10)], 1)
-        s.apply_effect(self)
+        status_effect = StatusEffect("Defence", [('defence', 10)], 1)
+        self.status_effects.append(self)
+        return status_effect.apply_effect(self)
 
     def skill_action(self, selected_skill: Skill, target: Creature) -> dict:
         print('player skilled!', selected_skill, 'target:', target)
@@ -546,7 +546,7 @@ class Skeleton(MapMob):
 
 class CombatSkeleton(Creature):
     skeleton_counter=0
-    def __init__(self, game, groups, player: CombatPlayer, centre: tuple[int, int]):
+    def __init__(self, game, groups, player: CombatPlayer, centre: tuple[int, int], level=1):
         self.spritesheet = Spritesheet(MobType.Skeleton)
         # temp: af
         self.mobs = groups[0]
@@ -560,7 +560,8 @@ class CombatSkeleton(Creature):
         CombatSkeleton.skeleton_counter+=1
         self.name = f"Skeleton {self.skeleton_counter}"
         self.hovered = False
-        self.level_up()
+        for _ in range(level):
+            self.level_up()
 
         self.player = player
         # for now only target is player
@@ -613,7 +614,9 @@ class CombatSkeleton(Creature):
 
     def defend_action(self, target, *args):
         print('skeleton defended')
-        return StatusEffect("Defence", [('defence', 10)], 1).apply_effect(target)
+        status_effect = StatusEffect("Defence", [('defence', 10)], 1)
+        self.status_effects.append(target)
+        return status_effect.apply_effect(target)
 
     ###
 

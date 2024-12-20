@@ -92,7 +92,8 @@ class CombatLog:
             elif isinstance(value, Die) or isinstance(value, DiceGroup):
                 change_word = 'increased'
             
-            self.messages.append((f"{skill_target}'s {stat} {change_word} by {value}!", self.color))
+            # temp: this is wrong
+            self.messages.append((f"User's {stat} {change_word} by {value}!", self.color))
 
         self.check_messages()
 
