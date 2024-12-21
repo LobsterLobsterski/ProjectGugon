@@ -5,8 +5,9 @@ from itertools import tee
 import random
 from typing import Iterable
 from pygame.sprite import Group
+from pygame import image
 
-from sprites import Wall
+from sprites import Floor, Wall
 
 
 class TileType(IntEnum):
@@ -95,7 +96,7 @@ class BinarySpacePartition:
             BinarySpacePartition._make_corridor(map, start, finish, is_vertical=bool(random.getrandbits(1)))
     
     
-    def create_map(tile_width: int, tile_height: int, sprite_groups: Iterable[Group],  debug=False):
+    def create_map(tile_width: int, tile_height: int, collision_group: Group, background_group: Group,  debug=False):
         '''
         orderly rooms, dijkstra map to find 
         'essential rooms' and force exploration
@@ -118,13 +119,12 @@ class BinarySpacePartition:
             print('map:')
             for row in map:
                 print([int(i) for i in row])
-        _create_walls(map, sprite_groups)
+        _create_walls_floors(map, collision_group, background_group)
 
         return map, rooms
 
 
 class CellularAutomata:
-    
     def count_neighbouring_walls(x:int, y:int, width: int, height: int, temp_grid: list[list[TileType]]) -> int:
         count = 0
         for x_coord in range(x-1, x+2):
@@ -168,14 +168,14 @@ class CellularAutomata:
         map = CellularAutomata.run_cellular_automata(noise_grid, iterations=2)
         return _remove_unreachable_areas(map)
     
-    def create_map(tile_width: int, tile_height: int, sprite_groups: Iterable[Group], debug=False):
+    def create_map(tile_width: int, tile_height: int, collision_group: Group, background_group: Group, debug=False):
         map = CellularAutomata.generate_map(tile_width, tile_height)
 
         if not CellularAutomata._map_is_all_walls(map):
             map = CellularAutomata.generate_map(tile_width, tile_height)
 
         _encase_map(map, tile_width, tile_height)
-        _create_walls(map, sprite_groups)
+        _create_walls_floors(map, collision_group, background_group)
         
         return map, None
     
@@ -183,7 +183,7 @@ class CellularAutomata:
         flattened = sum(map, [])
         return all([tile==TileType.Wall for tile in flattened])
     
-    
+
 class DrunkenStumble:
     def initialise_map(tile_width: int, tile_height: int):
         return [
@@ -216,14 +216,14 @@ class DrunkenStumble:
 
         return map
 
-    def create_map(tile_width: int, tile_height: int, sprite_groups: Iterable[Group],  debug=False):
+    def create_map(tile_width: int, tile_height: int, collision_group: Group, background_group: Group,  debug=False):
         map = DrunkenStumble.initialise_map(tile_width, tile_height)
         hulk_number = 10
         steps_per_hulk = 1500
         map = DrunkenStumble.set_hulks_loose(map, hulk_number, steps_per_hulk)
         map = _remove_unreachable_areas(map)
         _encase_map(map, tile_width, tile_height)
-        _create_walls(map, sprite_groups)
+        _create_walls_floors(map, collision_group, background_group)
 
         return map, None
         
@@ -275,8 +275,6 @@ def _remove_unreachable_areas(map: list[list[TileType]]) -> list[list[TileType]]
 
     return map
 
-
-
 def _pairwise(iterable: Iterable) -> Iterable:
     a, b = tee(iterable)
     next(b, None)
@@ -291,16 +289,6 @@ def _get_random_floor(map):
     else:
         return _get_random_floor(map)
 
-def _check_if_changed(grid1, grid2):
-    width, height = len(grid1[0]), len(grid1)
-
-    for y in range(height):
-        for x in range(width):
-            if grid1[y][x] != grid2[y][x]:
-                return True
-            
-    return False
-
 def _is_within_map_bounds(x, y, width, height):
         if x < 0 or x >= width:
             return False
@@ -309,11 +297,14 @@ def _is_within_map_bounds(x, y, width, height):
         
         return True
     
-def _create_walls(map: list[list[TileType]], sprite_groups: Iterable[Group]):
+def _create_walls_floors(map: list[list[TileType]], collision_group: Group, background_group: Group):
+    tile_map = image.load("./assets/Ground/Tilemap_Elevation.png").convert_alpha()
     for y, row in enumerate(map):
         for x, tile in enumerate(row):
             if tile == TileType.Wall:
-                Wall(sprite_groups, x, y)
+                Wall((collision_group, background_group), tile_map, x, y)
+            elif tile == TileType.Floor:
+                Floor((background_group), tile_map, x, y)
     
 def _encase_map(map: list[list[TileType]], tile_width: int, tile_height: int):
     for x in range(tile_width):

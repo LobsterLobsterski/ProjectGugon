@@ -7,10 +7,10 @@ from CombatLog import CombatLog
 from Dice import Die
 from LevelUp import Paladin
 from map import Map, Viewport
-from proceduralGeneration import ProceduralGenerationType
+from proceduralGeneration import ProceduralGenerationType, TileType
 from settings import BGCOLOR, BLACK, DARK_GRAY, FPS, GRAY, GREEN, HEIGHT, LIGHTGREY, RED, TILESIZE, WHITE, WIDTH, YELLOW
 
-from sprites import CombatSkeleton, MapExit, MobType, Player, Skeleton, Creature
+from sprites import CombatSkeleton, MapExit, MobType, Player, Skeleton, Creature, Wall
 
 class State:
     def __init__(self, game, clock, screen):
@@ -84,14 +84,14 @@ class LevelUpState(State):
                 if self.selected_idx is not None:
                     return self.choices[self.selected_idx]
 
-
 class WorldMapState(State):
     def __init__(self, game, clock, screen):
         super().__init__(game, clock, screen)
 
         self.map = []
         self.player_turn = True
-        self.mobs = []
+        self.mobs = []  
+
         self.new(game)
 
     def new(self, game):
@@ -100,14 +100,15 @@ class WorldMapState(State):
         self.interactable_layer = pg.sprite.Group()
         self.player_layer = pg.sprite.Group()
         self.mob_layer = pg.sprite.Group()
+        self.collision_group = pg.sprite.Group()
 
         map_type = random.choice(list(ProceduralGenerationType))
-        self.map = Map((self.all_sprites, self.background_layer),
+        self.map = Map(self.collision_group, self.background_layer,
                        (64, 48), map_generator_type=map_type)
         
         player_pos_x, player_pos_y = self.map.get_initial_player_pos()
         self.player = Player(self.game, (self.all_sprites, self.player_layer), 
-                             (self.background_layer, self.mob_layer), 
+                             (self.collision_group, self.mob_layer), 
                              player_pos_x, player_pos_y,
                              Paladin())
         self.player.assign_combat_sprite()
@@ -628,7 +629,6 @@ class CombatState(State):
 class MenuState:
     pass
 
-import pygame as pg
 
 class HubState(State):
     def __init__(self, game, clock, screen):
@@ -654,14 +654,14 @@ class HubState(State):
 
         self.blacksmith_upgrades = {
             'Damage':   {'rect': pg.Rect(100, 200, 200, 100), 'level': 0, 'hovered': False},
-            'Defense':  {'rect': pg.Rect(350, 200, 200, 100), 'level': 0, 'hovered': False},
+            'Defence':  {'rect': pg.Rect(350, 200, 200, 100), 'level': 0, 'hovered': False},
             'Armour':    {'rect': pg.Rect(600, 200, 200, 100), 'level': 0, 'hovered': False},
             'Biteback': {'rect': pg.Rect(850, 200, 200, 100), 'level': 0, 'hovered': False},
         }
 
         self.trainer_upgrades = {
             'Attack': {'rect': pg.Rect(100, 200, 200, 100), 'level': 0, 'hovered': False},
-            'Defense': {'rect': pg.Rect(350, 200, 200, 100), 'level': 0, 'hovered': False},
+            'Defence': {'rect': pg.Rect(350, 200, 200, 100), 'level': 0, 'hovered': False},
             'Crit Range': {'rect': pg.Rect(600, 200, 200, 100), 'level': 0, 'hovered': False},
         }
 

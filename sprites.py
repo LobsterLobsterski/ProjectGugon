@@ -12,6 +12,9 @@ from settings import GREEN, GRIDHEIGHT, GRIDWIDTH, RED, TILESIZE
 from tickers import Skill, StatusEffect
 from utils import get_squared_distance
 
+def get_tile(tile_map, x, y, tile_size=TILESIZE):
+    rect = pg.Rect(x * tile_size, y * tile_size, tile_size, tile_size)
+    return tile_map.subsurface(rect)
 
 class MobType(Enum):
     '''
@@ -98,8 +101,46 @@ class GameObject(pg.sprite.Sprite):
     def get_position(self)->tuple[int, int]:
         return self.x_pos, self.y_pos
 
+    # temp: wtf this shoudlnt be here
     def init_behaviour(self, behaviour_tree: Dict[Callable, Callable]) -> BehaviourTree:
         return BehaviourTree(self, behaviour_tree)
+    
+    def apply_tint(self, color):
+        """Apply a tint to the surface (light brown for example)."""
+        tint_surface = pg.Surface(self.image.get_size())
+        tint_surface.fill(color + (0,))  # Add transparency value (0 = fully opaque)
+        
+        # Blend the tint with the original image using alpha blending
+        self.image.blit(tint_surface, (0, 0), special_flags=pg.BLEND_RGBA_MULT)
+
+class Wall(GameObject):
+    def __init__(self, sprite_groups: Iterable, tile_map, x_pos: int, y_pos: int):
+        super().__init__(sprite_groups, 
+                            get_tile(tile_map, 1, 5),
+                            x_pos,
+                            y_pos
+                            )
+        # self.image.fill(GREEN)
+        self.rect.x = x_pos * TILESIZE
+        self.rect.y = y_pos * TILESIZE
+
+
+class Floor(GameObject):
+    def __init__(self, sprite_groups: Iterable, tile_map, x_pos: int, y_pos: int):
+        # Get the original floor tile from the tile map
+        floor_texture = get_tile(tile_map, 1, 1)
+
+        # Apply a brown tint to the floor texture (adjust the RGBA values as needed)
+        self.image = floor_texture.copy()
+        # self.apply_tint((132, 123, 109))
+        self.apply_tint((120, 105, 90))
+
+        super().__init__(sprite_groups, self.image, x_pos, y_pos)
+
+        self.rect.x = x_pos * TILESIZE
+        self.rect.y = y_pos * TILESIZE
+
+
 
 class Creature(GameObject):
     def __init__(self, game, groups: Iterable, image: pg.Surface, x: int, y: int, health: int, damage: int, attack: int, defence: int, armour: int, damage_dice: DiceGroup, class_table: ClassTable):
@@ -632,19 +673,6 @@ class CombatSkeleton(Creature):
         super().tickers_update()
         for s in self.skills:
             s.update()
-
-
-class Wall(GameObject):
-    def __init__(self, sprite_groups: Iterable, x_pos: int, y_pos: int):
-        super().__init__(sprite_groups, 
-                            pg.Surface((TILESIZE, TILESIZE)),
-                            x_pos,
-                            y_pos
-                            )
-
-        self.image.fill(GREEN)
-        self.rect.x = x_pos * TILESIZE
-        self.rect.y = y_pos * TILESIZE
 
 
 class MapExit(GameObject):

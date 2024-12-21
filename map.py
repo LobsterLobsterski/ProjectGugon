@@ -6,9 +6,10 @@ from Pathfinding import Pathfinder
 
 
 class Map:
-    def __init__(self, sprite_groups: tuple, map_size: tuple[int, int], map_generator_type: ProceduralGenerationType):
+    def __init__(self, collision_group: sprite.Group, background_group: sprite.Group, map_size: tuple[int, int], map_generator_type: ProceduralGenerationType):
         self.tile_width, self.tile_height = map_size
-        self.sprite_groups = sprite_groups
+        self.collision_group = collision_group
+        self.background_group = background_group
         self.rooms = []
         self.map = []
         self.generator = map_generator_type.value
@@ -16,7 +17,7 @@ class Map:
         self.exit = ...
 
     def generate_map(self):
-        self.map, self.rooms = self.generator.create_map(self.tile_width, self.tile_height, self.sprite_groups)
+        self.map, self.rooms = self.generator.create_map(self.tile_width, self.tile_height, self.collision_group, self.background_group)
 
     def assign_map_exit(self, player_pos: tuple[int, int]):
         potential_exit = self._get_random_floor()
