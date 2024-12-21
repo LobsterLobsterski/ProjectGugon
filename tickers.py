@@ -169,7 +169,8 @@ class Heal(Skill):
         amount = DiceGroup([Die(8), Die(8)]).roll()
         target.heal(amount)
         return {'name': 'Heal',
-                'effects': {{'stat': 'health', 'value': amount}}
+                'effects': [{'stat': 'health', 'value': amount}],
+                'target': target.name
                 }
 
 class Agathys(Skill):
@@ -186,7 +187,7 @@ class InvincibleConqueror(Skill):
         super().__init__('Invincible Conqueror', True, InvincibleConqueror.effect, cooldown)
 
     def effect(target, *args):
-        status_effect = StatusEffect('Invincible Conqueror', [('resistance', 1), ('attack_number', 1), ('crit_range', -1)], 10).apply_effect(target)
+        status_effect = StatusEffect('Invincible Conqueror', [('resistance', 1), ('attack_number', 1), ('crit_range', -1)], 10)
         target.status_effects.append(status_effect)
         return status_effect.apply_effect(target)
 
@@ -195,7 +196,7 @@ class ShieldOfFaith(Skill):
         super().__init__('Shield of Faith', True, ShieldOfFaith.effect, cooldown)
 
     def effect(target, *args):
-        status_effect = StatusEffect('Shield of Faith', [('defence', 2)], 10).apply_effect(target)
+        status_effect = StatusEffect('Shield of Faith', [('defence', 2)], 10)
         target.status_effects.append(status_effect)
         return status_effect.apply_effect(target)
       
@@ -204,7 +205,7 @@ class SacredWeapon(Skill):
         super().__init__('Sacred Weapon', True, SacredWeapon.effect, cooldown)
 
     def effect(target, *args):
-        status_effect = StatusEffect('Sacred Weapon', [('damage_dice', Die(8))], 15).apply_effect(target)
+        status_effect = StatusEffect('Sacred Weapon', [('damage_dice', Die(8))], 15)
         target.status_effects.append(status_effect)
         return status_effect.apply_effect(target)
 
@@ -213,14 +214,14 @@ class HolyNimbus(Skill):
         super().__init__('Holy Nimbus', True, HolyNimbus.effect, cooldown)
 
     def effect(target, *args):
-        status_effect = StatusEffect('Holy Nimbus', [('defence', 2), ('armour', 2), ('passive_damage', 10)], 10).apply_effect(target)
+        status_effect = StatusEffect('Holy Nimbus', [('defence', 2), ('armour', 2), ('passive_damage', 10)], 10)
         target.status_effects.append(status_effect)
         return status_effect.apply_effect(target)
 
-list_of_all_skills = [Distract, 
-                      Rampage, 
-                      Smite, 
-                      Bless, 
+list_of_all_skills = [Distract,
+                      Rampage,
+                      Smite,
+                      Bless,
                       TripleSlash,
                       Heal,
                       Agathys,
