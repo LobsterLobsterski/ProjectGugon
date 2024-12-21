@@ -628,132 +628,175 @@ class CombatState(State):
 class MenuState:
     pass
 
+import pygame as pg
 
 class HubState(State):
     def __init__(self, game, clock, screen):
         super().__init__(game, clock, screen)
-        # temp: should be 1
         self.base_level = 1
         self.player_upgrade_cost = 10
         self.currency = 0
 
         self.font = pg.font.Font(None, 36)
-        self.hub_areas = [
-            {"name": "Base Upgrades", "rect": pg.Rect(100, 200, 200, 50), "hovered": False},
-            {"name": "Character Upgrades", "rect": pg.Rect(400, 200, 300, 50), "hovered": False},
-            {"name": "Return to Dungeon", "rect": pg.Rect(300, 400, 300, 50), "hovered": False},
-        ]
+        self.hub_areas = {
+            "Base Upgrades":        {"rect": pg.Rect(100, 100, 200, 50), "hovered": False},
+            "Blacksmith":           {"rect": pg.Rect(100, 150, 200, 50), "hovered": False},
+            "Trainer":              {"rect": pg.Rect(400, 150, 200, 50), "hovered": False},
+            "Temple":               {"rect": pg.Rect(700, 150, 200, 50), "hovered": False},
+            "Return to Dungeon":    {"rect": pg.Rect(300, 400, 300, 50), "hovered": False},
+        }
 
-        self.base_upgrade_cost = 20 * self.base_level
-        self.character_upgrades = [
-            {'name': 'Max Health', 'rect': pg.Rect(100, 200, 200, 100), 'level': 0, 'hovered': False},
-            {'name': 'Damage', 'rect': pg.Rect(350, 200, 200, 100), 'level': 0, 'hovered': False},
-            {'name': 'Attack', 'rect': pg.Rect(600, 200, 200, 100), 'level': 0, 'hovered': False},
-            {'name': 'Defense', 'rect': pg.Rect(850, 200, 200, 100), 'level': 0, 'hovered': False}
-        ]
+        self.base_upgrades = {
+            'Blacksmith':   {'rect': pg.Rect(100, 200, 200, 100), 'level': 1, 'hovered': False},
+            'Trainer':      {'rect': pg.Rect(350, 200, 200, 100), 'level': 1, 'hovered': False},
+            'Temple':       {'rect': pg.Rect(600, 200, 200, 100), 'level': 1, 'hovered': False},
+        }
 
-        self.upgrades_visible = False
+        self.blacksmith_upgrades = {
+            'Damage':   {'rect': pg.Rect(100, 200, 200, 100), 'level': 0, 'hovered': False},
+            'Defense':  {'rect': pg.Rect(350, 200, 200, 100), 'level': 0, 'hovered': False},
+            'Armour':    {'rect': pg.Rect(600, 200, 200, 100), 'level': 0, 'hovered': False},
+            'Biteback': {'rect': pg.Rect(850, 200, 200, 100), 'level': 0, 'hovered': False},
+        }
+
+        self.trainer_upgrades = {
+            'Attack': {'rect': pg.Rect(100, 200, 200, 100), 'level': 0, 'hovered': False},
+            'Defense': {'rect': pg.Rect(350, 200, 200, 100), 'level': 0, 'hovered': False},
+            'Crit Range': {'rect': pg.Rect(600, 200, 200, 100), 'level': 0, 'hovered': False},
+        }
+
+        self.temple_upgrades = {
+            'Max Health': {'rect': pg.Rect(100, 200, 200, 100), 'level': 0, 'hovered': False},
+            'Regeneration': {'rect': pg.Rect(350, 200, 200, 100), 'level': 0, 'hovered': False},
+            'Passive Damage': {'rect': pg.Rect(600, 200, 200, 100), 'level': 0, 'hovered': False},
+        }
+
+        self.current_area_name = None
+        self.current_area = None
         self.return_button = pg.Rect(300, 500, 200, 50)
         self.return_button_hovered = False
 
+        # For insufficient funds message
+        self.insufficient_funds_message = ""
+        self.insufficient_funds_alpha = 0
+
     def get_character_upgrades(self) -> list[tuple[str, int]]:
-        return [(upgrade['name'].lower().replace(' ', '_'), upgrade['level']) for upgrade in self.character_upgrades if upgrade['level']]
+        upgrades = []
+        for upgrade_list in [self.blacksmith_upgrades, self.trainer_upgrades, self.temple_upgrades]:
+            upgrades.extend([(upgrade_name.lower().replace(' ', '_'), upgrade['level']) for upgrade_name, upgrade in upgrade_list.items() if upgrade['level']])
+        return upgrades
     
     def run(self):
         while True:
             self.dt = self.clock.tick(FPS) / 1000
             self.events()
-            # self.update()
+            self.update()
             self.draw()
 
     def events(self):
         mouse_pos = pg.mouse.get_pos()
 
-        for area in self.hub_areas:
-            area["hovered"] = area["rect"].collidepoint(mouse_pos)
+        if self.current_area is None:
+            for area_name, area in self.hub_areas.items():
+                area["hovered"] = area["rect"].collidepoint(mouse_pos)
+        else:
+            for upgrade_name, upgrade in self.current_area.items():
+                upgrade["hovered"] = upgrade['rect'].collidepoint(mouse_pos)
 
         self.return_button_hovered = self.return_button.collidepoint(mouse_pos)
-
-        if self.upgrades_visible:
-            for upgrade in self.character_upgrades:
-                upgrade_rect = upgrade['rect']
-                upgrade["hovered"] = upgrade_rect.collidepoint(mouse_pos)
 
         for event in pg.event.get():
             if event.type == pg.QUIT:
                 self.quit()
 
             elif event.type == pg.MOUSEBUTTONDOWN:
-                if not self.upgrades_visible:
-                    for area in self.hub_areas:
+                if self.current_area is None:
+                    for area_name, area in self.hub_areas.items():
                         if area["rect"].collidepoint(event.pos):
-                            self.handle_selection(area["name"])
+                            self.handle_selection(area_name)
                 else:
                     if self.return_button.collidepoint(event.pos):
-                        self.upgrades_visible = False
+                        self.current_area = None
                     else:
-                        for idx, upgrade in enumerate(self.character_upgrades):
-                            upgrade_rect = upgrade['rect']
-                            if upgrade_rect.collidepoint(event.pos):
-                                self.purchase_upgrade(idx)
+                        print()
+                        for upgrade_name, upgrade in self.current_area.items():
+                            if upgrade['rect'].collidepoint(event.pos):
+                                self.purchase_upgrade(upgrade_name)
 
     def handle_selection(self, name):
         if name == "Base Upgrades":
-            self.upgrade_base()
-        elif name == "Character Upgrades":
-            self.upgrades_visible = True
+            self.current_area_name = 'Base Upgrades'
+            self.current_area = self.base_upgrades
+
+        elif name == "Blacksmith":
+            self.current_area_name = 'Blacksmith'
+            self.current_area = self.blacksmith_upgrades
+
+        elif name == "Trainer":
+            self.current_area_name = 'Trainer'
+            self.current_area = self.trainer_upgrades
+
+        elif name == "Temple":
+            self.current_area_name = 'Temple'
+            self.current_area = self.temple_upgrades
+
         elif name == "Return to Dungeon":
             self.game.return_to_dungeon()
 
-    def upgrade_base(self):
-        if self.currency > self.base_upgrade_cost:
-            self.base_level+=1
-            self.base_upgrade_cost = 100 * self.base_level
-            print(f"Base upgraded to level {self.base_level}")
-        else:
-            print("Not enough meta-currency!")
-
-    def purchase_upgrade(self, upgrade_idx: int):
-        upgrade = self.character_upgrades[upgrade_idx]
+    def purchase_upgrade(self, upgrade_name: str):
+        upgrade = self.current_area[upgrade_name]
         cost = self.player_upgrade_cost
 
-        if upgrade['level'] >= self.base_level:
-            print(f"Cannot upgrade {upgrade['name']}: Base level too low.")
+        if self.current_area_name != 'Base Upgrades' and upgrade['level'] >= self.base_upgrades[self.current_area_name]['level']:
+            self.display_insufficient_funds("Base level too low.")
             return
 
         if self.currency >= cost:
             self.currency -= cost
             upgrade['level'] += 1
-            self.player_upgrade_cost = int(cost * 1.5)
-            print(f"{upgrade['name']} upgraded to level {upgrade['level']}")
+            if self.current_area_name != 'Base Upgrades':
+                self.player_upgrade_cost = int(cost * 1.5)
+            print(f"{upgrade_name} upgraded to level {upgrade['level']}")
         else:
-            print("Not enough meta-currency!")
-    
+            self.display_insufficient_funds("Not enough meta-currency!")
+
+    def display_insufficient_funds(self, message):
+        self.insufficient_funds_message = message
+        self.insufficient_funds_alpha = 255  # Fully visible initially
+
+    def update(self):
+        # Gradually fade out the insufficient funds message
+        if self.insufficient_funds_alpha > 0:
+            self.insufficient_funds_alpha -= 255 * self.dt  # Fades out over 1 second
+            if self.insufficient_funds_alpha < 0:
+                self.insufficient_funds_alpha = 0
+
     def draw(self):
         self.screen.fill(DARK_GRAY)
 
         self.draw_currency_display()
 
-        if self.upgrades_visible:
-            self.draw_upgrade_menu()
-        else:
-            for area in self.hub_areas:
+        if self.current_area is None:
+            for area_name, area in self.hub_areas.items():
                 color = GREEN if area["hovered"] else GRAY
                 pg.draw.rect(self.screen, color, area["rect"])
-                text = self.font.render(area["name"], True, BLACK)
+                text = self.font.render(area_name, True, BLACK)
                 self.screen.blit(text, (area["rect"].x + 10, area["rect"].y + 10))
-            
+        else:
+            self.draw_upgrade_menu()
+
+        self.draw_insufficient_funds_message()
         pg.display.flip()
 
     def draw_currency_display(self):
         currency_text = self.font.render(f"Meta Currency: {self.currency}", True, WHITE)
         self.screen.blit(currency_text, (20, 20))
-    
+
     def draw_upgrade_menu(self):
-        for upgrade in self.character_upgrades:
+        for upgrade_name, upgrade in self.current_area.items():
             upgrade_rect = upgrade['rect']
-            
-            if upgrade['level'] >= self.base_level:
+
+            if self.current_area_name != 'Base Upgrades' and upgrade['level'] >= self.base_upgrades[self.current_area_name]['level']:
                 color = DARK_GRAY  # Locked state
                 locked_text = self.font.render("Base level too low", True, RED)
                 self.screen.blit(locked_text, (upgrade_rect.x, upgrade_rect.y - 20))
@@ -764,9 +807,10 @@ class HubState(State):
             pg.draw.rect(self.screen, BLACK, upgrade_rect, 2)
 
             # Render upgrade text
-            name_text = self.font.render(upgrade['name'], True, BLACK)
+            name_text = self.font.render(upgrade_name, True, BLACK)
             level_text = self.font.render(f"Level: {upgrade['level']}", True, BLACK)
-            cost_text = self.font.render(f"Cost: {self.player_upgrade_cost}", True, BLACK)
+            cost = upgrade['level'] * 20 if self.current_area == self.base_upgrades else self.player_upgrade_cost
+            cost_text = self.font.render(f"Cost: {cost}", True, BLACK)
 
             self.screen.blit(name_text, (upgrade_rect.x + 10, upgrade_rect.y + 10))
             self.screen.blit(level_text, (upgrade_rect.x + 10, upgrade_rect.y + 40))
@@ -777,6 +821,13 @@ class HubState(State):
         pg.draw.rect(self.screen, color, self.return_button)
         return_text = self.font.render("Return", True, BLACK)
         self.screen.blit(return_text, (self.return_button.x + 50, self.return_button.y + 10))
-    
+
+    def draw_insufficient_funds_message(self):
+        if self.insufficient_funds_alpha > 0:
+            message_surface = self.font.render(self.insufficient_funds_message, True, (255, 0, 0))
+            message_surface.set_alpha(int(self.insufficient_funds_alpha))
+            self.screen.blit(message_surface, (self.screen.get_width() // 2 - message_surface.get_width() // 2, 50))
+
     def store_meta_currency(self, number: int):
-        self.currency += number 
+        self.currency += number
+

@@ -228,9 +228,10 @@ class Creature(GameObject):
                 self.status_effects.remove(s)
                 s.remove_effect(self)
 
+            self.heal(self.attributes['regeneration'])
+
     def update(self):
         super().update()
-        self.heal(self.attributes['regeneration'])
     
 # temp: for later
 class CombatCrature(Creature):
@@ -256,7 +257,7 @@ class Player(Creature):
         self.collision_layers = collision_layers
         self.direction = Direction.RIGHT
         self.combat_player = None
-        self.meta_currency = 0 # meta currency
+        self.meta_currency = 100 # meta currency
 
     def apply_upgrades(self, upgrades: list[tuple[str, int]]):
         for stat, level in upgrades:
@@ -264,6 +265,9 @@ class Player(Creature):
                 self.attributes['max_health'] += DiceGroup([self.attributes['hit_die'] for _ in range(level)]).roll()
                 self.attributes['health'] = self.attributes['max_health']
                 continue
+
+            if stat == 'crit_range':
+                stat*=1
             
             self.attributes[stat] += level
 

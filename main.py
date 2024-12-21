@@ -19,8 +19,6 @@ class Game:
         self.hub_state = HubState(self, self.clock, self.screen)
 
         self.player = self.map_state.player
-        
-
         self.current_state = self.map_state
  
     def run(self):
