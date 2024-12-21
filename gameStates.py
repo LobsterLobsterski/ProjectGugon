@@ -115,7 +115,7 @@ class WorldMapState(State):
         self.map.assign_map_exit((player_pos_x, player_pos_y))
         MapExit(game, (self.all_sprites, self.interactable_layer), self.map.exit[0], self.map.exit[1])
         
-        mob_positions = self.map.get_mob_positions(1)
+        mob_positions = self.map.get_mob_positions(3+(self.game.current_floor-1)*3)
         self.mobs = [Skeleton(game, self.map, self.player, (self.all_sprites, self.mob_layer), x, y) for x, y in mob_positions]
         
         self.viewport = Viewport(self.map.tile_width, self.map.tile_height)
@@ -596,7 +596,7 @@ class CombatState(State):
 
             elif pg.time.get_ticks() - self.end_screen_timer > 2000:
                 self.player.add_experience(self.encounter_experience)
-                self.player.add_meta_currency(Die(10).roll())
+                self.game.player.add_meta_currency(Die(10).roll())
                 self.exit_combat(False)
 
         elif not self.player.is_alive:

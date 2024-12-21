@@ -13,8 +13,9 @@ class Game:
         pg.display.set_caption(TITLE)
         self.clock = pg.time.Clock()
         pg.key.set_repeat(100, 100)
-        self.map_state = WorldMapState(self, self.clock, self.screen)
         self.current_floor = 1
+        
+        self.map_state = WorldMapState(self, self.clock, self.screen)
         self.hub_state = HubState(self, self.clock, self.screen)
 
         self.player = self.map_state.player
