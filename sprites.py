@@ -174,6 +174,12 @@ class Creature(GameObject):
 
         self.is_alive = True
 
+        ### bobing
+        self.original_y = self.rect.y
+        self.bob_timer = None
+        self.bob_duration = 300
+        self.bob_offset = -10
+
     def add_experience(self, experience_points: int):
         print(f'{self} receieved {experience_points} experience!')
         self.experience += experience_points
@@ -271,6 +277,28 @@ class Creature(GameObject):
 
             self.heal(self.attributes['regeneration'])
 
+    def start_bobbing(self):
+        """Initiates the bobbing animation."""
+        self.bob_timer = pg.time.get_ticks()
+
+    def update_bobbing(self):
+        """Updates the bobbing animation state."""
+        if self.bob_timer is None:
+            return
+
+        elapsed = pg.time.get_ticks() - self.bob_timer
+        if elapsed < self.bob_duration:
+            # Calculate interpolation between original_y and bob_offset
+            progress = elapsed / self.bob_duration
+            if progress < 0.5:
+                self.rect.y = self.original_y + self.bob_offset * progress * 2  # Bob up
+            else:
+                self.rect.y = self.original_y + self.bob_offset * (2 - progress * 2)  # Bob down
+        else:
+            # Reset after animation
+            self.rect.y = self.original_y
+            self.bob_timer = None
+    
     def update(self):
         super().update()
     
@@ -626,6 +654,7 @@ class CombatSkeleton(Creature):
 
 
     def fight(self) -> dict:
+        self.start_bobbing()
         action = self.bahaviour_tree.find_action()
         return action(self.target, self)
 

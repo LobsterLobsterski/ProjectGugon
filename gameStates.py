@@ -227,6 +227,10 @@ class CombatState(State):
             max_messages=11
         )
 
+        self.enemy_turn_queue = []
+        self.current_enemy = None
+        self.enemy_bob_timer = None
+
         self.player_turn = player_first
         self.map_mob = map_mob
         self.end_screen_timer = None
@@ -589,6 +593,9 @@ class CombatState(State):
             self.game.enter_world_map()
     
     def update(self):
+        for enemy in self.mobs_group:
+            enemy.update_bobbing()
+
         if len(self.mobs_group) == 0:
             self.map_mob.kill()
 
