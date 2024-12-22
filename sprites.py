@@ -529,9 +529,9 @@ class MapMob(GameObject):
 
     ###basic behaviour conditions
     def detect_player(self) -> bool:
-        #temp, for now mobs have global awareness
-        #of player as long as they're alive
-        return self.player.is_alive
+        # 8 squares range
+        return get_squared_distance(self.player.get_position(), self.get_position()) < 64
+        # return self.player.is_alive
     
     def in_engage_range(self) -> bool:
         ### needs to be here otherwise the mob doesn't refind path after attacking
@@ -542,8 +542,8 @@ class MapMob(GameObject):
     def get_random_valid_roam_goal(self, distance=5):
         x = random.randint(self.x_pos-distance, self.x_pos+distance)
         y = random.randint(self.y_pos-distance, self.y_pos+distance)
-        x = int(min(GRIDHEIGHT, max(0, x)))
-        y = int(min(GRIDWIDTH, max(0, y)))
+        x = int(min(GRIDWIDTH, max(0, x)))
+        y = int(min(GRIDHEIGHT, max(0, y)))
         if self.map.check_if_pos_is_floor((x, y)):
             return x, y
 
