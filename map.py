@@ -29,7 +29,6 @@ class Map:
 
     
     def check_if_pos_is_floor(self, pos: tuple[int, int]) -> bool:
-        # print('floor type:', self.map[pos[0]][pos[1]], self.map[pos[0]][pos[1]] == TileType.Floor)
         return self.map[pos[0]][pos[1]] == TileType.Floor
     
     def _get_random_floor(self) -> tuple[int, int]:

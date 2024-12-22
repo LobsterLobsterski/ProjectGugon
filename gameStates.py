@@ -757,7 +757,6 @@ class HubState(State):
                     if self.return_button.collidepoint(event.pos):
                         self.current_area = None
                     else:
-                        print()
                         for upgrade_name, upgrade in self.current_area.items():
                             if upgrade['rect'].collidepoint(event.pos):
                                 self.purchase_upgrade(upgrade_name)
@@ -795,7 +794,6 @@ class HubState(State):
             upgrade['level'] += 1
             if self.current_area_name != 'Base Upgrades':
                 self.player_upgrade_cost = int(cost * 1.5)
-            print(f"{upgrade_name} upgraded to level {upgrade['level']}")
         else:
             self.display_insufficient_funds("Not enough meta-currency!")
 

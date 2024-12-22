@@ -146,7 +146,6 @@ class Creature(GameObject):
     def __init__(self, game, groups: Iterable, image: pg.Surface, x: int, y: int, health: int, damage: int, attack: int, defence: int, armour: int, damage_dice: DiceGroup, class_table: ClassTable):
         super().__init__(groups, image, x, y)
         self.game = game
-        print(self.id, health, damage, attack, defence, armour, damage_dice)
         self.attributes = {
             'max_health': health,
             'health': health,
@@ -181,7 +180,6 @@ class Creature(GameObject):
         self.bob_offset = -10
 
     def add_experience(self, experience_points: int):
-        print(f'{self} receieved {experience_points} experience!')
         self.experience += experience_points
         if self.experience >= self.class_table.next_experience_threshold():
             self.level_up()
@@ -192,7 +190,6 @@ class Creature(GameObject):
         self.attributes['health'] += hp_increase
 
         gains = self.class_table.level_up()
-        print('\n\nCreature.level_up:', gains)
         for gain in gains:
             if isinstance(gain, list):
                 gain = self.game.enter_level_up_selection(gain)
@@ -225,19 +222,15 @@ class Creature(GameObject):
         if not damage:
             return 0
         
-        print(self.id, 'received', damage, 'damage!')
         if self.attributes['resistance']:
             damage //= 2
 
-        # print('\n\nth:', self.attributes['temporary_health'])
         self.attributes['temporary_health'] -= damage
         if self.attributes['temporary_health'] >= 0:
             return 0
 
-        # print('negative th:', self.attributes['temporary_health'])
         damage = self.attributes['temporary_health']*-1
         self.attributes['temporary_health'] = 0
-        # print('damage:', damage)
         
         self.attributes['health'] -= damage
         if self.attributes['health'] <= 0:
@@ -256,16 +249,14 @@ class Creature(GameObject):
         return {'dealt': {'damage_roll': roll, 'damage_bonus': self.attributes['damage'], 'total_received': target_recieved_damage}, 'received': self_received_damage}
 
     def die(self):
-        print('Creature die!', self.__class__.__name__)
         self.is_alive = False
         self.kill()
         # self.spawn_corpse()
             
     def heal(self, amount: int):
         if not amount:
-            return 
+            return
         
-        print(self, 'healing for', amount)
         self.attributes['health'] = min(self.attributes['health']+amount, self.attributes['max_health'])
     
     def tickers_update(self):
@@ -414,7 +405,6 @@ class Player(Creature):
         return None
 
     def engage(self, mob):
-        print('engaging', mob)
         self.game.initiate_combat(mob, True)
         
     def update(self):
@@ -457,7 +447,6 @@ class CombatPlayer(Player):
     
     def attack_action(self, target: Creature) -> list[dict]:
         attack_data = []
-        print('player attacked', target.name)
         for _ in range(self.attributes['attack_number']):
             results = self.make_attack(target)
             attack_data.append(results)
@@ -465,13 +454,11 @@ class CombatPlayer(Player):
         return results
     
     def defend_action(self):
-        print('player defended')
         status_effect = StatusEffect("Defence", [('defence', 10)], 1)
         self.status_effects.append(status_effect)
         return status_effect.apply_effect(self)
 
     def skill_action(self, selected_skill: Skill, target: Creature) -> dict:
-        print('player skilled!', selected_skill, 'target:', target)
         return selected_skill.activate(target, self)
 
     def tickers_update(self):
@@ -509,14 +496,11 @@ class MapMob(GameObject):
         self.last_known_player_pos = self.player.get_position()
       
     def act(self):
-        print(f'\n{type(self).__name__} {self.id} acts:')
-
         action = self.bahaviour_tree.find_action()
         action()
         
     ###basic behaviour actions
     def follow_path(self):
-        print('\tfollows path')
         try:
             new_pos = next(self.path_iterator)
         except StopIteration:
@@ -529,12 +513,10 @@ class MapMob(GameObject):
         self.place(new_pos)
 
     def engage(self):
-        print('\tengaging player!', self.mob_type)
         self.path = []
         self.game.initiate_combat(self, False)
    
     def roam(self):
-        print('\tRoaming!')
         if not self.path:
             goal = self.get_random_valid_roam_goal()
             self.update_path(goal)
@@ -557,11 +539,8 @@ class MapMob(GameObject):
     def get_random_valid_roam_goal(self, distance=5):
         x = random.randint(self.x_pos-distance, self.x_pos+distance)
         y = random.randint(self.y_pos-distance, self.y_pos+distance)
-        print(x, y)
         x = int(min(GRIDHEIGHT, max(0, x)))
         y = int(min(GRIDWIDTH, max(0, y)))
-        print('get_random_valid_roam_goal:', x, y)
-        print('w, h:', GRIDWIDTH, GRIDHEIGHT)
         if self.map.check_if_pos_is_floor((x, y)):
             return x, y
 
@@ -583,7 +562,6 @@ class MapMob(GameObject):
         return self.last_known_player_pos != self.player.get_position()
     
     def move(self, dx=0, dy=0):
-        # print('\tMob movement')
         self.x_pos += dx
         self.y_pos += dy
 
@@ -638,7 +616,6 @@ class CombatSkeleton(Creature):
                          13, 3, 5, 13, 0, DiceGroup([Die(6)]), 
                          SkeletonClass(self.make_attack))
         
-        print('sheleton', CombatSkeleton.skeleton_counter, 'has ', self.attributes['health'], self.attributes['max_health'])
         self.image = pg.transform.scale(self.image, (128, 128))
         self.rect = self.image.get_rect(center=centre)
 
@@ -681,7 +658,6 @@ class CombatSkeleton(Creature):
 
     ### actions
     def make_attack(self, target: Creature) -> dict[str, any]:
-        print('skeleton attack bonus:', self.attributes['attack'])
         roll = Die(20).roll()
         is_crit = roll >= self.attributes['crit_range']
         is_hit = roll+self.attributes['attack'] >= target.attributes['defence']
@@ -700,7 +676,6 @@ class CombatSkeleton(Creature):
         return results
 
     def defend_action(self, target, *args):
-        print('skeleton defended')
         status_effect = StatusEffect("Defence", [('defence', 10)], 1)
         self.status_effects.append(status_effect)
         return status_effect.apply_effect(self)
@@ -727,6 +702,5 @@ class MapExit(GameObject):
         self.game = game
     
     def interact(self):
-        print('exit interacted with!')
         self.game.enter_new_level()
 

@@ -42,13 +42,11 @@ class Room:
 
 
 class BinarySpacePartition:
-    def _make_room(tile_width: int, tile_height: int, min_splits: int, max_splits: int, debug: bool) -> Room:
+    def _make_room(tile_width: int, tile_height: int, min_splits: int, max_splits: int) -> Room:
         #-1 so they dont spawn in outside walls
         room = Room(1, 1, tile_width-1, tile_height-1)
         NUM_OF_SPLITS = random.randint(min_splits, max_splits)
         is_vertical_split = True
-        if debug:
-            print('\n', NUM_OF_SPLITS)
         for _ in range(NUM_OF_SPLITS):
             take_second_split = bool(random.getrandbits(1))
             is_vertical_split = not is_vertical_split
@@ -62,9 +60,6 @@ class BinarySpacePartition:
                     room.set_y(room.y+room.height//2)
                 room.set_height(room.height//2)
 
-            if debug:
-                print('\ttake second part' if take_second_split else '\ttake first part')
-                print('\t\t', room)
 
         return room
     
@@ -95,8 +90,7 @@ class BinarySpacePartition:
             start, finish = room.get_random_tile(), room2.get_random_tile()
             BinarySpacePartition._make_corridor(map, start, finish, is_vertical=bool(random.getrandbits(1)))
     
-    
-    def create_map(tile_width: int, tile_height: int, collision_group: Group, background_group: Group,  debug=False):
+    def create_map(tile_width: int, tile_height: int, collision_group: Group, background_group: Group):
         '''
         orderly rooms, dijkstra map to find 
         'essential rooms' and force exploration
@@ -107,18 +101,12 @@ class BinarySpacePartition:
         NUM_OF_ROOMS = 10
         for i in range(NUM_OF_ROOMS):
             min_splits, max_splits = (3, 5) if i<2 else (5, 6) if i<7 else (4, 8)
-            room = BinarySpacePartition._make_room(tile_width, tile_height, min_splits, max_splits, debug)
+            room = BinarySpacePartition._make_room(tile_width, tile_height, min_splits, max_splits)
             BinarySpacePartition._add_room_to_map(map, room)
             rooms.append(room)
-
-            if debug: print('made room of coords:', room)
         
         _encase_map(map, tile_width, tile_height)
         BinarySpacePartition._add_corridors_to_map(map, rooms)
-        if debug:
-            print('map:')
-            for row in map:
-                print([int(i) for i in row])
         _create_walls_floors(map, collision_group, background_group)
 
         return map, rooms
@@ -168,7 +156,7 @@ class CellularAutomata:
         map = CellularAutomata.run_cellular_automata(noise_grid, iterations=2)
         return _remove_unreachable_areas(map)
     
-    def create_map(tile_width: int, tile_height: int, collision_group: Group, background_group: Group, debug=False):
+    def create_map(tile_width: int, tile_height: int, collision_group: Group, background_group: Group):
         map = CellularAutomata.generate_map(tile_width, tile_height)
 
         if not CellularAutomata._map_is_all_walls(map):
@@ -216,7 +204,7 @@ class DrunkenStumble:
 
         return map
 
-    def create_map(tile_width: int, tile_height: int, collision_group: Group, background_group: Group,  debug=False):
+    def create_map(tile_width: int, tile_height: int, collision_group: Group, background_group: Group):
         map = DrunkenStumble.initialise_map(tile_width, tile_height)
         hulk_number = 10
         steps_per_hulk = 1500
@@ -311,12 +299,3 @@ def _encase_map(map: list[list[TileType]], tile_width: int, tile_height: int):
         for y in range(tile_height):
             if x in (0, tile_width-1) or y in (0, tile_height-1):
                 map[y][x] = TileType.Wall
-
-if __name__ == '__main__':
-    map, rooms = ProceduralGenerationType.CA.value.create_map(64, 48, [Group()])
-    print('map:')
-    for row in map:
-        print([int(i) for i in row])
-
-    
-

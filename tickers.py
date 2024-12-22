@@ -42,8 +42,6 @@ class StatusEffect(Ticker):
         self.effects = effects
     
     def apply_effect(self, target) -> dict:
-        # target.status_effects.append(self)
-        # print('[StatusEffect] applying', self.effects, 'to', target)
         for effect in self.effects:
             if isinstance(effect, Callable):
                 effect(target.passive_skills)
@@ -94,7 +92,6 @@ class StatusEffect(Ticker):
 class Rampage(AttackSkill):
     def __init__(self, attack_method: callable, cooldown=5):
         def effect(target, self_target) -> list[dict]:
-            print('rampage used: target, self_target', target, self_target)
             report = {'name': 'Rampage', 'Status Effects': [], 'Attacks': []}
 
             status_effect_1 = StatusEffect('Out of Position: Defence', [('defence', -5)], 3)

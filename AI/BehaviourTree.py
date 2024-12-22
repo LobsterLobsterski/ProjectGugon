@@ -46,8 +46,6 @@ class BehaviourTree:
     def __init__(self, mob, tree: Dict[Callable, List[Callable, ]]):
         self.mob = mob
         self.root = self.construct_tree(tree)
-        # self.print_tree()
-        # sys.exit()
 
     def find_action(self, current_node=None) -> Callable:
         '''
@@ -66,15 +64,11 @@ class BehaviourTree:
         return current_node.executionBehaviour
     
     def construct_tree(self, tree):
-        # print('\nCONSTRUCTING BEHAVIOUR TREE!!!')
         def get_children_nodes(children: List[Callable, ], recursionLevel=0) -> List[BehaviourNode]:
-            # print('\n', '\t'*recursionLevel, 'get_children_nodes level:', recursionLevel)
             nodes = []
 
             for method in children:
-                # print('\t'*(recursionLevel+1), 'child method:', method.__name__)
                 if method in tree:
-                    # print('\t'*(recursionLevel+2), 'conditon method')
                     ### condition method child
                     children_nodes = get_children_nodes(tree[method], recursionLevel+1)
                     node = ControlFlowNode(method.__name__, None, method, children_nodes)
@@ -84,25 +78,18 @@ class BehaviourTree:
                     nodes.append(node)
 
                 else:
-                    # print('\t'*(recursionLevel+2), 'exec method')
                     ### action method child
                     nodes.append(ExecutionNode(method.__name__, None, method))
 
             return nodes
 
         root_condition_method, root_children_methods = next(iter(tree.items()))
-
-        # print('root_condition_method:', root_condition_method.__name__)
-        # print('\t', [m.__name__ for m in root_children_methods])
         children_nodes = get_children_nodes(root_children_methods)
-        # print('root_children_methods:', children_nodes)
-        
+
         root = ControlFlowNode(root_condition_method.__name__, None, root_condition_method, children_nodes)
         for c in children_nodes:
             c.parent = root
 
-        # print('root', root)
-        # root.print_children()
         return root
 
     def print_tree(self, node=None, recursion_level=0):
