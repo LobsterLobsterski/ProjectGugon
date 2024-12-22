@@ -13,7 +13,7 @@ from tickers import Skill, StatusEffect
 from utils import get_squared_distance
 
 def get_tile(tile_map, x, y, tile_size=TILESIZE):
-    rect = pg.Rect(x * tile_size, y * tile_size, tile_size, tile_size)
+    rect = pg.Rect(x*tile_size, y*tile_size, tile_size, tile_size)
     return tile_map.subsurface(rect)
 
 class MobType(Enum):
@@ -113,6 +113,7 @@ class GameObject(pg.sprite.Sprite):
         # Blend the tint with the original image using alpha blending
         self.image.blit(tint_surface, (0, 0), special_flags=pg.BLEND_RGBA_MULT)
 
+
 class Wall(GameObject):
     def __init__(self, sprite_groups: Iterable, tile_map, x_pos: int, y_pos: int):
         super().__init__(sprite_groups, 
@@ -141,6 +142,26 @@ class Floor(GameObject):
         self.rect.y = y_pos * TILESIZE
 
 
+class MapExit(GameObject):
+    def __init__(self, game, sprite_groups: Iterable, tile_map, x_pos: int, y_pos: int):
+        floor_texture = get_tile(tile_map, 1, 7)
+
+        self.image = floor_texture.copy()
+        self.apply_tint((255, 150, 150))
+
+        super().__init__(sprite_groups, 
+                            self.image,
+                            x_pos,
+                            y_pos
+                            )
+
+        # self.image.fill(RED)
+        self.rect.x = x_pos * TILESIZE
+        self.rect.y = y_pos * TILESIZE
+        self.game = game
+    
+    def interact(self):
+        self.game.enter_new_level()
 
 class Creature(GameObject):
     def __init__(self, game, groups: Iterable, image: pg.Surface, x: int, y: int, health: int, damage: int, attack: int, defence: int, armour: int, damage_dice: DiceGroup, class_table: ClassTable):
@@ -544,8 +565,12 @@ class MapMob(GameObject):
         y = random.randint(self.y_pos-distance, self.y_pos+distance)
         x = int(min(GRIDWIDTH, max(0, x)))
         y = int(min(GRIDHEIGHT, max(0, y)))
-        if self.map.check_if_pos_is_floor((x, y)):
-            return x, y
+        try:
+            if self.map.check_if_pos_is_floor((x, y)):
+                return x, y
+        except:
+            print('x, y', x, y)
+            exit()
 
         return self.get_random_valid_roam_goal(distance)
     
@@ -766,21 +791,4 @@ class CombatSkeleton(Creature):
         super().tickers_update()
         for s in self.skills:
             s.update()
-
-
-class MapExit(GameObject):
-    def __init__(self, game, sprite_groups: Iterable, x_pos: int, y_pos: int):
-        super().__init__(sprite_groups, 
-                            pg.Surface((TILESIZE, TILESIZE)),
-                            x_pos,
-                            y_pos
-                            )
-
-        self.image.fill(RED)
-        self.rect.x = x_pos * TILESIZE
-        self.rect.y = y_pos * TILESIZE
-        self.game = game
-    
-    def interact(self):
-        self.game.enter_new_level()
 

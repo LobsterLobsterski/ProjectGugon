@@ -114,7 +114,8 @@ class WorldMapState(State):
         self.player.assign_combat_sprite()
         
         self.map.assign_map_exit((player_pos_x, player_pos_y))
-        MapExit(game, (self.all_sprites, self.interactable_layer), self.map.exit[0], self.map.exit[1])
+        tile_map = pg.image.load("./assets/Ground/Tilemap_Elevation.png").convert_alpha()
+        MapExit(game, (self.all_sprites, self.interactable_layer), tile_map, self.map.exit[0], self.map.exit[1])
         
         mob_positions = self.map.get_mob_positions(1)#(3+(self.game.current_floor-1)*3)
         self.mobs = [Skeleton(game, self.map, self.player, self.all_sprites, self.mob_layer, x, y) for x, y in mob_positions]
