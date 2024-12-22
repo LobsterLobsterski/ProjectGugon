@@ -474,13 +474,14 @@ class CombatPlayer(Player):
         
 
 class MapMob(GameObject):
-    def __init__(self, game, map, player, groups: Iterable, init_x_pos: int, init_y_pos: int, mob_type: MobType):
+    def __init__(self, game, map, player, all_sprites_groups: pg.sprite.Group, all_map_mobs_group: pg.sprite.Group, init_x_pos: int, init_y_pos: int, mob_type: MobType):
         self.spritesheet = Spritesheet(mob_type)
         
-        super().__init__(groups, self.spritesheet.image_at((0, 0)), 
+        super().__init__((all_sprites_groups, all_map_mobs_group), self.spritesheet.image_at((0, 0)), 
                          init_x_pos, init_y_pos,
                          )
         
+        self.all_map_mobs = all_map_mobs_group
         self.mob_type = mob_type
         self.rect.x = self.x_pos * TILESIZE
         self.rect.y = self.y_pos * TILESIZE
@@ -566,7 +567,9 @@ class MapMob(GameObject):
         self.y_pos += dy
 
     def check_collisions(self, new_pos: tuple[int, int]):
-        #temp
+        for mob in self.all_map_mobs:
+            if mob.get_position() == new_pos:
+                return True
         return False
     
     def update(self):
@@ -595,8 +598,8 @@ class Goblin(MapMob):
 
 
 class Skeleton(MapMob):
-    def __init__(self, game, map, player, groups: Iterable, init_x_pos: int, init_y_pos: int):
-        super().__init__(game, map, player, groups, init_x_pos, init_y_pos, MobType.Skeleton)
+    def __init__(self, game, map, player, all_sprites_groups: pg.sprite.Group, all_map_mobs_group: pg.sprite.Group, init_x_pos: int, init_y_pos: int):
+        super().__init__(game, map, player, all_sprites_groups, all_map_mobs_group, init_x_pos, init_y_pos, MobType.Skeleton)
 
         behaviour_tree = {
             self.detect_player: [self.roam, self.in_engage_range], 

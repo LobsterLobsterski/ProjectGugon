@@ -117,7 +117,7 @@ class WorldMapState(State):
         MapExit(game, (self.all_sprites, self.interactable_layer), self.map.exit[0], self.map.exit[1])
         
         mob_positions = self.map.get_mob_positions(3+(self.game.current_floor-1)*3)
-        self.mobs = [Skeleton(game, self.map, self.player, (self.all_sprites, self.mob_layer), x, y) for x, y in mob_positions]
+        self.mobs = [Skeleton(game, self.map, self.player, self.all_sprites, self.mob_layer, x, y) for x, y in mob_positions]
         
         self.viewport = Viewport(self.map.tile_width, self.map.tile_height)
   
@@ -128,28 +128,28 @@ class WorldMapState(State):
             self.update()
             self.draw()
     
+    def enemies_act(self):
+        for mob in self.mob_layer:
+            mob.act()
+    
     def update(self):
         self.player.tickers_update()
 
         self.all_sprites.update()
-        # put this in mob.update() ?
         if not self.player_turn:
-            for mob in self.mob_layer:
-                mob.act()
+            self.enemies_act()
             self.player_turn = True
+
         self.viewport.update(self.player)            
     
     def draw(self):
         pg.display.set_caption("{:.2f}".format(self.clock.get_fps()))
         self.screen.fill(BGCOLOR)
         self.draw_grid()
-
-        self.draw_mob_paths()
-
         self.draw_background_sprites()
         self.draw_interactable_sprites()
         self.draw_action_sprites()
-        self.draw_turn_depictor()
+        self.draw_mob_paths()
         pg.display.flip()
 
     def draw_mob_paths(self):
@@ -163,13 +163,6 @@ class WorldMapState(State):
                 rec.y = rec.y*TILESIZE + 3*TILESIZE//8
                 self.screen.blit(image, self.viewport.apply_offset(rec))
 
-    def draw_turn_depictor(self):
-        rect = pg.Rect(0, 0, 50, 50)
-        pg.draw.rect(self.screen, BLACK, rect, 2)
-        text = pg.font.Font(None, 36).render("1" if self.player_turn else "0", True, WHITE)
-        text_rect = text.get_rect(center=rect.center)
-        self.screen.blit(text, text_rect)
-    
     def draw_background_sprites(self):
         for sprite in self.background_layer:
             self.screen.blit(sprite.image, self.viewport.apply_offset(sprite.rect))
@@ -436,7 +429,6 @@ class CombatState(State):
         self.draw_actions()
         self.draw_taget_box()
         self.draw_targets()
-        self.draw_turn_depictor()
         self.draw_status_effect_boxes()
         self.combat_log.draw()
 
@@ -447,13 +439,6 @@ class CombatState(State):
                 self.draw_defeat_message()
 
         pg.display.flip()
-
-    def draw_turn_depictor(self):
-        rect = pg.Rect(0, 0, 50, 50)
-        pg.draw.rect(self.screen, BLACK, rect, 2)
-        text = pg.font.Font(None, 36).render("1" if self.player_turn else "0", True, WHITE)
-        text_rect = text.get_rect(center=rect.center)
-        self.screen.blit(text, text_rect)
 
     def draw_enemies(self):
         ### drawing enemies
