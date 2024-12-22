@@ -175,7 +175,7 @@ class Creature(GameObject):
         self.is_alive = True
 
         ### bobing
-        self.original_y = self.rect.y
+        self.original_y = ...
         self.bob_timer = None
         self.bob_duration = 300
         self.bob_offset = -10
@@ -278,13 +278,20 @@ class Creature(GameObject):
             self.heal(self.attributes['regeneration'])
 
     def start_bobbing(self):
-        """Initiates the bobbing animation."""
+        '''
+        Initiates the bobbing animation
+        '''
         self.bob_timer = pg.time.get_ticks()
+        self.original_y = self.rect.y
 
-    def update_bobbing(self):
-        """Updates the bobbing animation state."""
+    def update_bobbing(self) -> bool:
+        '''
+        updates the bob animation and
+        returns bool indicating whether or not
+        creature is still bobbing
+        '''
         if self.bob_timer is None:
-            return
+            return False
 
         elapsed = pg.time.get_ticks() - self.bob_timer
         if elapsed < self.bob_duration:
@@ -298,6 +305,8 @@ class Creature(GameObject):
             # Reset after animation
             self.rect.y = self.original_y
             self.bob_timer = None
+        
+        return True
     
     def update(self):
         super().update()

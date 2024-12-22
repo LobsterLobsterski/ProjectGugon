@@ -227,17 +227,12 @@ class CombatState(State):
             max_messages=11
         )
 
-        self.enemy_turn_queue = []
-        self.current_enemy = None
-        self.enemy_bob_timer = None
-
         self.player_turn = player_first
         self.map_mob = map_mob
         self.end_screen_timer = None
         self.encounter_experience = 0
 
         self.mobs_group = pg.sprite.Group()
-
         self.player = self.game.player.combat_player
 
         self.generate_encounter(map_mob.mob_type)
@@ -253,6 +248,11 @@ class CombatState(State):
         ]
 
         self.target_selection_box = pg.Rect(250, HEIGHT-260, WIDTH-250-50, 200)
+
+        self.enemy_turn_queue = []
+        self.current_enemy_turn = None
+        self.enemy_turn_queue_was_initialised = False
+
 
     def get_encounter_experience(self):
         difficult_mod = 1.5+.5*ceil(len(self.mobs_group)/3)
@@ -592,10 +592,24 @@ class CombatState(State):
         else:
             self.game.enter_world_map()
     
-    def update(self):
-        for enemy in self.mobs_group:
-            enemy.update_bobbing()
+    def init_enemy_queue(self):
+        if not self.enemy_turn_queue_was_initialised:
+            self.enemy_turn_queue_was_initialised = True
+            for enemy in self.mobs_group:
+                self.enemy_turn_queue.append(enemy)
+    
+    def update_bobbing(self):
+        ''' 
+        update bob animation of current enemy
+        and based on that end his turn when
+        applicable
+        '''
+        if self.current_enemy_turn:
+            is_bobbing = self.current_enemy_turn.update_bobbing()
+            if not is_bobbing:
+                self.current_enemy_turn = None
 
+    def check_if_combat_ended(self):
         if len(self.mobs_group) == 0:
             self.map_mob.kill()
 
@@ -606,6 +620,7 @@ class CombatState(State):
                 self.player.add_experience(self.encounter_experience)
                 self.game.player.add_meta_currency(Die(10).roll())
                 self.exit_combat(False)
+            return True
 
         elif not self.player.is_alive:
             if self.end_screen_timer is None:
@@ -615,22 +630,39 @@ class CombatState(State):
                 self.player.die()
                 self.game.player.die()
                 self.exit_combat(True)
+            return True
 
-        if not self.player_turn:
-            for enemy in self.mobs_group:
-                enemy.receive_damage(self.player.attributes['passive_damage'])
-                self.player.receive_damage(enemy.attributes['passive_damage'])
+        return False
+    
+    def execute_current_enemy_turn(self):
+        if self.current_enemy_turn is None:
+            self.current_enemy_turn = self.enemy_turn_queue.pop(0)
+            self.current_enemy_turn.start_bobbing()
 
-                enemy_report = enemy.fight()
-                self.combat_log.add_enemy_message(enemy_report, enemy.name, enemy.target.name)
+            self.current_enemy_turn.receive_damage(self.player.attributes['passive_damage'])
+            self.player.receive_damage(self.current_enemy_turn.attributes['passive_damage'])
+            enemy_report = self.current_enemy_turn.fight()
+            self.combat_log.add_enemy_message(enemy_report, self.current_enemy_turn.name, self.current_enemy_turn.target.name)
 
-                enemy.update()
-                enemy.tickers_update()
-
+            self.current_enemy_turn.update()
+            self.current_enemy_turn.tickers_update()
+    
+    def end_combat_turn(self):
+        if not self.enemy_turn_queue and self.enemy_turn_queue_was_initialised:
             self.player.update()
             self.player.tickers_update()
             self.player_turn = True
             self.selected_action = None
+            self.enemy_turn_queue_was_initialised = False
+
+    def update(self):
+        self.update_bobbing()
+        has_combat_ended = self.check_if_combat_ended()
+        
+        if not self.player_turn and not has_combat_ended:
+            self.init_enemy_queue()
+            self.execute_current_enemy_turn()
+            self.end_combat_turn()
 
 
 class MenuState:
