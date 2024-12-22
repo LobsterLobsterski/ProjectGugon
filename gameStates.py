@@ -116,7 +116,7 @@ class WorldMapState(State):
         self.map.assign_map_exit((player_pos_x, player_pos_y))
         MapExit(game, (self.all_sprites, self.interactable_layer), self.map.exit[0], self.map.exit[1])
         
-        mob_positions = self.map.get_mob_positions(3+(self.game.current_floor-1)*3)
+        mob_positions = self.map.get_mob_positions(1)#(3+(self.game.current_floor-1)*3)
         self.mobs = [Skeleton(game, self.map, self.player, self.all_sprites, self.mob_layer, x, y) for x, y in mob_positions]
         
         self.viewport = Viewport(self.map.tile_width, self.map.tile_height)
@@ -143,7 +143,7 @@ class WorldMapState(State):
         self.viewport.update(self.player)            
     
     def draw(self):
-        pg.display.set_caption("{:.2f}".format(self.clock.get_fps()))
+        # pg.display.set_caption("{:.2f}".format(self.clock.get_fps()))
         self.screen.fill(BGCOLOR)
         self.draw_grid()
         self.draw_background_sprites()
@@ -254,13 +254,13 @@ class CombatState(State):
 
     def generate_mob(self, mob_type: MobType, mob_centre: tuple[int, int]):
         if mob_type == MobType.Skeleton:
-            mob_level = self.game.current_floor
+            mob_level = 2#self.game.current_floor
             return CombatSkeleton(self.game, (self.mobs_group, ), self.player, mob_centre, mob_level)
         else:
             raise NotImplementedError(f'[generate_mob] generation of {mob_type} not implemented yet!')
     
     def generate_encounter(self, mob_type: MobType):
-        num_of_enemies = random.randint(1, 4)
+        num_of_enemies = 1#random.randint(1, 4)
         screen_width_per_enemy = WIDTH//num_of_enemies
         enemy_width = 150
         
@@ -391,7 +391,7 @@ class CombatState(State):
                     if skill.target_is_self: 
                         skill_report = self.player.skill_action(skill, self.player)
 
-                        self.combat_log.add_status_effect_message(skill_report, 'Player')
+                        self.combat_log.add_status_effect_message(skill_report, 'Player', 'Player')
 
                         self.selected_skill = None
                         self.player_turn = False
@@ -421,7 +421,7 @@ class CombatState(State):
 
     ### drawing
     def draw(self):
-        pg.display.set_caption("{:.2f}".format(self.clock.get_fps()))
+        # pg.display.set_caption("{:.2f}".format(self.clock.get_fps()))
         self.screen.fill(BLACK)
 
         self.draw_enemies()

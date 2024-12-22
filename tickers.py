@@ -158,6 +158,15 @@ class Bless(Skill):
         target.status_effects.append(status_effect)
         return status_effect.apply_effect(target)
         
+class Bane(Skill):
+    def __init__(self, name='Bless', cooldown=5):
+        super().__init__(name, False, self.effect, cooldown)
+
+    def effect(self, target, *args):
+        status_effect = StatusEffect(self.name, [('attack', -2), ('max_health', -20)], 3)
+        target.status_effects.append(status_effect)
+        return status_effect.apply_effect(target)
+
 class Heal(Skill):
     def __init__(self, cooldown=10):
         super().__init__('Heal', True, Heal.effect, cooldown)
@@ -175,7 +184,7 @@ class Agathys(Skill):
         super().__init__('Armour of Agathys', True, Agathys.effect, cooldown)
 
     def effect(target, *args):
-        status_effect = StatusEffect('Armour of Agathys', [('temporary_health', 5), ('biteback', 5)], 5)
+        status_effect = StatusEffect('Armour of Agathys', [('temporary_health', 20), ('biteback', 5)], 5)
         target.status_effects.append(status_effect)
         return status_effect.apply_effect(target)
         
@@ -198,11 +207,11 @@ class ShieldOfFaith(Skill):
         return status_effect.apply_effect(target)
       
 class SacredWeapon(Skill):
-    def __init__(self, cooldown=40):
-        super().__init__('Sacred Weapon', True, SacredWeapon.effect, cooldown)
+    def __init__(self, name='Sacred Weapon', cooldown=40):
+        super().__init__(name, True, self.effect, cooldown)
 
-    def effect(target, *args):
-        status_effect = StatusEffect('Sacred Weapon', [('damage_dice', Die(8))], 15)
+    def effect(self, target, *args):
+        status_effect = StatusEffect(self.name, [('damage_dice', Die(8))], 15)
         target.status_effects.append(status_effect)
         return status_effect.apply_effect(target)
 

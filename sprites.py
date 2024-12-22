@@ -184,7 +184,7 @@ class Creature(GameObject):
         if self.experience >= self.class_table.next_experience_threshold():
             self.level_up()
 
-    def level_up(self):
+    def level_up(self) -> type:
         hp_increase = self.attributes['hit_die'].roll()
         self.attributes['max_health'] += hp_increase
         self.attributes['health'] += hp_increase
@@ -213,6 +213,8 @@ class Creature(GameObject):
             elif isinstance(gain, tuple):
                 stat, amount = gain
                 self.attributes[stat] += amount
+
+        return gains
         
     def get_level(self) -> int:
         return self.class_table.level
@@ -625,21 +627,53 @@ class CombatSkeleton(Creature):
         CombatSkeleton.skeleton_counter+=1
         self.name = f"Skeleton {self.skeleton_counter}"
         self.hovered = False
-        for _ in range(level):
-            self.level_up()
-
+        
         self.player = player
         # for now only target is player
         self.target = self.player
 
-        behaviour_tree = {
-            self.is_alone: [self.is_opponent_distracted, self.rampage_off_cooldown],
-            self.is_opponent_distracted: [self.distract_off_cooldown, self.rampage_off_cooldown], 
-            self.distract_off_cooldown: [self.rampage_off_cooldown, self.skills[0].activate],
-            self.rampage_off_cooldown: [self.attack_action, self.skills[1].activate]
+        # triple slash replaces ramage
+        self.skill_replace_dict = {
+            'Triple Slash': 'Rampage'
+        }
+        '''
+        skill name to list of:
+            previous_node: callable,
+                after what node does this new sub tree go
+            connect_to_prev_on_true: bool,
+                is this sub-tree connected to the previous node
+                on the on-true statement (2nd element of list)?
+            next_node: callable,
+                what node do we connect to on sub-tree exit
+            connect_to_next_on_true: bool
+                is this sub-trees exit located on the 
+                on-true of the root (2nd element of list)?
+
+        so this means that now, when skeleton gains necrotic strikes
+        after is alone evaluates true we'll consider the necrotic strikes
+        condition instead of the rampage condition. When evaluated it will be executed
+        if it evals to True and exit to is_rampage_off_cooldown on false.
+        '''
+        self.modify_behaviour_tree_dict = {
+            'Necrotic Strikes': [self.is_alone, True, self.is_rampage_off_cooldown, False],
+            'Armour of Agathys': [None, None, self.is_alone, False]
         }
 
-        self.bahaviour_tree = self.init_behaviour(behaviour_tree)
+        # temp: because of the btd we need to do first level up before initing btd
+        self.level_up()
+        #key: [on_false, on_true]
+        # basic bt
+        self.behaviour_tree_dict = {
+            self.is_alone: [self.is_opponent_distracted, self.is_rampage_off_cooldown],
+            self.is_opponent_distracted: [self.is_distract_off_cooldown, self.is_rampage_off_cooldown], 
+            self.is_distract_off_cooldown: [self.is_rampage_off_cooldown, self.skills[0].activate],
+            self.is_rampage_off_cooldown: [self.attack_action, self.skills[1].activate]
+        }
+
+        for _ in range(level-1):
+            self.level_up()
+
+        self.bahaviour_tree = self.init_behaviour(self.behaviour_tree_dict)
 
 
     def fight(self) -> dict:
@@ -653,11 +687,12 @@ class CombatSkeleton(Creature):
     
     def is_opponent_distracted(self):
         return 'Distracted' in self.player.status_effects
-    def distract_off_cooldown(self):
+    def is_distract_off_cooldown(self):
         return not self.skills[0].is_ticking()
-    def rampage_off_cooldown(self):
+    def is_rampage_off_cooldown(self):
         return not self.skills[1].is_ticking()
     ###
+
 
     ### actions
     def make_attack(self, target: Creature) -> dict[str, any]:
@@ -684,6 +719,48 @@ class CombatSkeleton(Creature):
         return status_effect.apply_effect(self)
 
     ###
+
+    def modify_behaviour_tree(self, gain: Skill):
+        previous_node, connect_to_prev_on_true, next_node, connect_to_next_on_true = self.modify_behaviour_tree_dict[gain.name]
+
+        condition_node = lambda *args: not gain.is_ticking()
+        execution_node = lambda self_target, target, *args: gain.activate(target, self_target)
+        # create subtree
+        if connect_to_next_on_true:
+            array = [execution_node, next_node]
+        else:
+            array = [next_node, execution_node]
+
+        sub_tree = {condition_node: array}
+        
+        # add subtree and connect it
+        if previous_node is None:
+            sub_tree.update(self.behaviour_tree_dict)
+            self.behaviour_tree_dict = sub_tree
+        else:
+            self.behaviour_tree_dict.update(sub_tree)
+            prev_node_connection_idx = int(connect_to_prev_on_true)
+            self.behaviour_tree_dict[previous_node][prev_node_connection_idx] = condition_node
+
+        
+    
+    def replace_skill(self, gain):
+        if gain.name in self.skill_replace_dict:
+            for skill in self.skills:
+                if skill.name == self.skill_replace_dict[gain.name]:
+                    self.skills.remove(skill)
+                    break
+    
+    def level_up(self):
+        gains = super().level_up()
+        for gain in gains:
+            self.replace_skill(gain)
+            if isinstance(gain, Skill):
+                if gain.name in self.modify_behaviour_tree_dict:
+
+                    self.modify_behaviour_tree(gain)
+
+        print('CombatSkeleton levelup: skills;', self.skills)
 
     def tickers_update(self):
         super().tickers_update()

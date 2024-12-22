@@ -163,9 +163,9 @@ class SkeletonClass(ClassTable):
                 1: [Distract()
                     ,Rampage(attack_method)
                     ],
-                2: [StatusEffect('Hard Bones', [('armour', 2)], -1)],
-                3: [StatusEffect('Undeadly Vigour', [('regeneration', 2)], -1)],
-                4: [StatusEffect('Necrotic Strikes', [('damage_dice', Die(6))], -1)],
+                2: [StatusEffect('Undeadly Vigour', [('regeneration', 2), ('armour', 2)], -1)],
+                3: [TripleSlash(attack_method), Agathys()],
+                4: [SacredWeapon('Necrotic Strikes')],
                 5: [StatusEffect('Deadly Strikes', [('crit_range', -1)], -1), ('attack', 1)],
                 6: [StatusEffect('Hardened bones', [('armour', 1)], -1), ('attack', 1), ('attack_number', 1)],
                 7: [StatusEffect('Mastery over Weaponry', [('attack', 5)], -1)],

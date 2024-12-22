@@ -74,13 +74,12 @@ class CombatLog:
         self.messages.append((f'{user_name} defends!', self.color))
         self.check_messages()
 
-    def add_status_effect_message(self, skill_report: dict, receiver_name: str, is_standalone_skill=True):
+    def add_status_effect_message(self, skill_report: dict, user_name: str, receiver_name: str, is_standalone_skill=True):
         skill_name = skill_report['name']
         skill_effects = skill_report['effects']
-        skill_target = skill_report['target']
 
         if is_standalone_skill:
-            self.messages.append((f'{receiver_name} used {skill_name}!', self.color))
+            self.messages.append((f'{user_name} used {skill_name}!', self.color))
         
         for effect in skill_effects:
             stat = effect['stat'].replace('_', ' ').capitalize()
@@ -93,7 +92,7 @@ class CombatLog:
                 change_word = 'increased'
             
             # temp: this is wrong
-            self.messages.append((f"User's {stat} {change_word} by {value}!", self.color))
+            self.messages.append((f"{receiver_name}'s {stat} {change_word} by {value}!", self.color))
 
         self.check_messages()
 
@@ -104,7 +103,7 @@ class CombatLog:
 
             self.messages.append((f'{user_name} used {skill_name} on {target_name}!', self.color))
             for status_effect_report in status_effect_reports:
-                self.add_status_effect_message(status_effect_report, user_name, is_standalone_skill=False)
+                self.add_status_effect_message(status_effect_report, user_name, target_name, is_standalone_skill=False)
 
             for attack_report in attack_reports:
                 self.add_attack_message(attack_report, user_name, target_name)
@@ -124,7 +123,8 @@ class CombatLog:
 
         elif 'effects' in report:
             # status effect
-            self.add_status_effect_message(report, enemy_name)
+            target_name = report['target']
+            self.add_status_effect_message(report, enemy_name, target_name)
 
         else:
             raise NotImplementedError(f'{report.keys()}: such raport type is not implemented!')
