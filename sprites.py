@@ -90,10 +90,6 @@ class GameObject(pg.sprite.Sprite):
         self.id = GameObject.number_of_obejects
         GameObject.number_of_obejects+=1
 
-    def place(self, new_x: int, new_y: int):
-        self.x_pos = new_x
-        self.y_pos = new_y
-
     def place(self, new_pos: tuple[int, int]):
         self.x_pos = new_pos[0]
         self.y_pos = new_pos[1]
@@ -101,10 +97,6 @@ class GameObject(pg.sprite.Sprite):
     def get_position(self)->tuple[int, int]:
         return self.x_pos, self.y_pos
 
-    # temp: wtf this shoudlnt be here
-    def init_behaviour(self, behaviour_tree: Dict[Callable, Callable]) -> BehaviourTree:
-        return BehaviourTree(self, behaviour_tree)
-    
     def apply_tint(self, color):
         """Apply a tint to the surface (light brown for example)."""
         tint_surface = pg.Surface(self.image.get_size())
@@ -113,6 +105,10 @@ class GameObject(pg.sprite.Sprite):
         # Blend the tint with the original image using alpha blending
         self.image.blit(tint_surface, (0, 0), special_flags=pg.BLEND_RGBA_MULT)
 
+    # temp: needs to be here as its the closest ancestor of both combat creature and map mob
+    def init_behaviour(self, behaviour_tree: Dict[Callable, Callable]) -> BehaviourTree:
+        return BehaviourTree(self, behaviour_tree)
+    
 
 class Wall(GameObject):
     def __init__(self, sprite_groups: Iterable, tile_map, x_pos: int, y_pos: int):
@@ -323,14 +319,6 @@ class Creature(GameObject):
         return True
     
     def update(self):
-        super().update()
-    
-# temp: for later
-class CombatCrature(Creature):
-    def __init__(self, game, groups, image, x, y, health, damage, attack, defence, armour, dice, class_table):
-        super().__init__(game, groups, image, x, y, health, damage, attack, defence, armour, dice, class_table)
-
-    def attack_action(self):
         pass
 
 
@@ -450,7 +438,6 @@ class Player(Creature):
 
 
 class CombatPlayer(Player):
-    # should probably inherit from Player and then rewrite code so that CombatPlayer receives damage into Player+
     def __init__(self, game, groups, collision_layers, init_x_pos, init_y_pos, attributes, skills, classTable):
         super().__init__(game, groups, collision_layers, init_x_pos, init_y_pos, classTable)
         self.rect = pg.Rect(50, 400, 100, 50)
@@ -489,12 +476,12 @@ class CombatPlayer(Player):
         for s in self.skills:
             s.update()
 
-    def update(self):
-        self.heal(self.attributes['regeneration'])
-
     def add_meta_currency(self, number):
         return super().add_meta_currency(number)
         
+    # same as creature to ignore Player class update loop
+    def update(self):
+        pass
 
 class MapMob(GameObject):
     def __init__(self, game, map, player, all_sprites_groups: pg.sprite.Group, all_map_mobs_group: pg.sprite.Group, init_x_pos: int, init_y_pos: int, mob_type: MobType):
@@ -634,33 +621,22 @@ class Skeleton(MapMob):
         }
         self.bahaviour_tree = self.init_behaviour(behaviour_tree)
 
-
-class CombatSkeleton(Creature):
-    skeleton_counter=0
-    def __init__(self, game, groups, player: CombatPlayer, centre: tuple[int, int], level=1):
-        self.spritesheet = Spritesheet(MobType.Skeleton)
-        # temp: af
-        self.mobs = groups[0]
-        super().__init__(game, groups, self.spritesheet.get_sprite(random.randint(0, 2), 0), 
-                         0, 0, 
-                         13, 3, 5, 13, 0, DiceGroup([Die(6)]), 
-                         SkeletonClass(self.make_attack))
-        
-        self.image = pg.transform.scale(self.image, (128, 128))
-        self.rect = self.image.get_rect(center=centre)
-
-        CombatSkeleton.skeleton_counter+=1
-        self.name = f"Skeleton {self.skeleton_counter}"
+class CombatCrature(Creature):
+    def __init__(self, game, player: CombatPlayer, mobs_group: pg.sprite.Group, 
+                 image: pg.Surface, x: int, y: int, mob_counter: int, 
+                 health: int, damage: int, attack: int, defence: int, armour: int, 
+                 dice: DiceGroup, class_table: ClassTable):
+        super().__init__(game, (mobs_group, ), image, x, y, health, damage, attack, defence, armour, dice, class_table)
+        self.all_combat_mobs = mobs_group
+        self.name = f"{type(self).__name__.replace('Combat', '')} {mob_counter}"
         self.hovered = False
-        
         self.player = player
         # for now only target is player
         self.target = self.player
 
-        # triple slash replaces ramage
-        self.skill_replace_dict = {
-            'Triple Slash': 'Rampage'
-        }
+        ### related to skills
+        # dict of skill-name to skill-name, keys replace values
+        self.skill_replace_dict = {}
         '''
         skill name to list of:
             previous_node: callable,
@@ -679,47 +655,16 @@ class CombatSkeleton(Creature):
         condition instead of the rampage condition. When evaluated it will be executed
         if it evals to True and exit to is_rampage_off_cooldown on false.
         '''
-        self.modify_behaviour_tree_dict = {
-            'Necrotic Strikes': [self.is_alone, True, self.is_rampage_off_cooldown, False],
-            'Armour of Agathys': [None, None, self.is_alone, False]
-        }
+        self.modify_behaviour_tree_dict = {}
 
-        # temp: because of the btd we need to do first level up before initing btd
         self.level_up()
-        #key: [on_false, on_true]
-        # basic bt
-        self.behaviour_tree_dict = {
-            self.is_alone: [self.is_opponent_distracted, self.is_rampage_off_cooldown],
-            self.is_opponent_distracted: [self.is_distract_off_cooldown, self.is_rampage_off_cooldown], 
-            self.is_distract_off_cooldown: [self.is_rampage_off_cooldown, self.skills[0].activate],
-            self.is_rampage_off_cooldown: [self.attack_action, self.skills[1].activate]
-        }
 
-        for _ in range(level-1):
-            self.level_up()
-
-        self.bahaviour_tree = self.init_behaviour(self.behaviour_tree_dict)
+        # key: [on_false, on_true]
+        # has the initial collection of collables needed to construct a behaviour tree
+        self.behaviour_tree_dict = {}
+        ###
 
 
-    def fight(self) -> dict:
-        self.start_bobbing()
-        action = self.bahaviour_tree.find_action()
-        return action(self.target, self)
-
-    ### conditions
-    def is_alone(self):
-        return len(self.mobs) == 1
-    
-    def is_opponent_distracted(self):
-        return 'Distracted' in self.player.status_effects
-    def is_distract_off_cooldown(self):
-        return not self.skills[0].is_ticking()
-    def is_rampage_off_cooldown(self):
-        return not self.skills[1].is_ticking()
-    ###
-
-
-    ### actions
     def make_attack(self, target: Creature) -> dict[str, any]:
         roll = Die(20).roll()
         is_crit = roll >= self.attributes['crit_range']
@@ -729,7 +674,7 @@ class CombatSkeleton(Creature):
             damage_roll_info = self.deal_damage(target, is_crit)
 
         return {'is_hit': is_hit, 'is_crit': is_crit, 'roll': roll, 'attack_bonus': self.attributes['attack'], 'damage': damage_roll_info}
-    
+
     def attack_action(self, target: Creature, *args) -> list[dict]:
         attack_data = []
         for _ in range(self.attributes['attack_number']):
@@ -737,14 +682,12 @@ class CombatSkeleton(Creature):
             attack_data.append(results)
 
         return results
-
-    def defend_action(self, target, *args):
+    
+    def defend_action(self, target, *args):###
         status_effect = StatusEffect("Defence", [('defence', 10)], 1)
         self.status_effects.append(status_effect)
         return status_effect.apply_effect(self)
-
-    ###
-
+    
     def modify_behaviour_tree(self, gain: Skill):
         previous_node, connect_to_prev_on_true, next_node, connect_to_next_on_true = self.modify_behaviour_tree_dict[gain.name]
 
@@ -767,8 +710,6 @@ class CombatSkeleton(Creature):
             prev_node_connection_idx = int(connect_to_prev_on_true)
             self.behaviour_tree_dict[previous_node][prev_node_connection_idx] = condition_node
 
-        
-    
     def replace_skill(self, gain):
         if gain.name in self.skill_replace_dict:
             for skill in self.skills:
@@ -791,4 +732,141 @@ class CombatSkeleton(Creature):
         super().tickers_update()
         for s in self.skills:
             s.update()
+
+
+class CombatSkeleton(Creature):
+    skeleton_counter=0
+    def __init__(self, game, mobs_group: pg.sprite.Group, player: CombatPlayer, centre: tuple[int, int], level=1):
+        self.spritesheet = Spritesheet(MobType.Skeleton)
+        CombatSkeleton.skeleton_counter+=1
+        super().__init__(game, mobs_group, self.spritesheet.get_sprite(random.randint(0, 2), 0), 
+                         0, 0, 
+                         13, 3, 5, 13, 0, DiceGroup([Die(6)]), 
+                         SkeletonClass(self.make_attack))
+        
+        self.all_combat_mobs = mobs_group
+        self.image = pg.transform.scale(self.image, (128, 128))
+        self.rect = self.image.get_rect(center=centre)
+
+        self.name = f"Skeleton {self.skeleton_counter}"###
+        self.hovered = False###
+        
+        self.player = player###
+        # for now only target is player
+        self.target = self.player###
+
+        # triple slash replaces ramage
+        self.skill_replace_dict = {
+            'Triple Slash': 'Rampage'
+        }
+        
+        self.modify_behaviour_tree_dict = {
+            # 'Rampage': [self.is_alone, True, self.attack_action, False],
+            # 'Distract': [self.is_alone, False, self.is_rampage_off_cooldown, False],
+            'Necrotic Strikes': [self.is_alone, True, self.is_rampage_off_cooldown, False],
+            'Armour of Agathys': [None, None, self.is_alone, False]
+        }
+
+        # temp: because of the btd we need to do first level up before initing btd
+        self.level_up()###
+        # basic skeleton bt
+        self.behaviour_tree_dict = {
+            self.is_alone: [self.is_opponent_distracted, self.is_rampage_off_cooldown],
+            self.is_opponent_distracted: [self.is_distract_off_cooldown, self.is_rampage_off_cooldown], 
+            self.is_distract_off_cooldown: [self.is_rampage_off_cooldown, self.skills[0].activate],
+            self.is_rampage_off_cooldown: [self.attack_action, self.skills[1].activate]
+        }
+
+        for _ in range(level-1):
+            self.level_up()
+
+        self.bahaviour_tree = self.init_behaviour(self.behaviour_tree_dict)
+
+
+    def fight(self) -> dict:
+        self.start_bobbing()
+        action = self.bahaviour_tree.find_action()
+        return action(self.target, self)
+
+    ### conditions
+    def is_alone(self):
+        return len(self.all_combat_mobs) == 1
+    def is_opponent_distracted(self):
+        return 'Distracted' in self.player.status_effects
+    def is_distract_off_cooldown(self):
+        return not self.skills[0].is_ticking()
+    def is_rampage_off_cooldown(self):
+        return not self.skills[1].is_ticking()
+    ###
+
+    ### actions
+    def make_attack(self, target: Creature) -> dict[str, any]:###
+        roll = Die(20).roll()
+        is_crit = roll >= self.attributes['crit_range']
+        is_hit = roll+self.attributes['attack'] >= target.attributes['defence']
+        damage_roll_info = {'dealt': {'damage_roll': 0, 'damage_bonus': 0, 'total_received': 0}, 'received': 0}
+        if is_hit:
+            damage_roll_info = self.deal_damage(target, is_crit)
+
+        return {'is_hit': is_hit, 'is_crit': is_crit, 'roll': roll, 'attack_bonus': self.attributes['attack'], 'damage': damage_roll_info}
+    
+    def attack_action(self, target: Creature, *args) -> list[dict]:###
+        attack_data = []
+        for _ in range(self.attributes['attack_number']):
+            results = self.make_attack(target)
+            attack_data.append(results)
+
+        return results
+
+    def defend_action(self, target, *args):###
+        status_effect = StatusEffect("Defence", [('defence', 10)], 1)
+        self.status_effects.append(status_effect)
+        return status_effect.apply_effect(self)
+    ###
+
+    def modify_behaviour_tree(self, gain: Skill):###
+        previous_node, connect_to_prev_on_true, next_node, connect_to_next_on_true = self.modify_behaviour_tree_dict[gain.name]
+
+        condition_node = lambda *args: not gain.is_ticking()
+        execution_node = lambda self_target, target, *args: gain.activate(target, self_target)
+        # create subtree
+        if connect_to_next_on_true:
+            array = [execution_node, next_node]
+        else:
+            array = [next_node, execution_node]
+
+        sub_tree = {condition_node: array}
+        
+        # add subtree and connect it
+        if previous_node is None:
+            sub_tree.update(self.behaviour_tree_dict)
+            self.behaviour_tree_dict = sub_tree
+        else:
+            self.behaviour_tree_dict.update(sub_tree)
+            prev_node_connection_idx = int(connect_to_prev_on_true)
+            self.behaviour_tree_dict[previous_node][prev_node_connection_idx] = condition_node
+
+    def replace_skill(self, gain):###
+        if gain.name in self.skill_replace_dict:
+            for skill in self.skills:
+                if skill.name == self.skill_replace_dict[gain.name]:
+                    self.skills.remove(skill)
+                    break
+    
+    def level_up(self):###
+        gains = super().level_up()
+        for gain in gains:
+            self.replace_skill(gain)
+            if isinstance(gain, Skill):
+                if gain.name in self.modify_behaviour_tree_dict:
+
+                    self.modify_behaviour_tree(gain)
+
+        print('CombatSkeleton levelup: skills;', self.skills)
+
+    def tickers_update(self):###
+        super().tickers_update()
+        for s in self.skills:
+            s.update()
+
 

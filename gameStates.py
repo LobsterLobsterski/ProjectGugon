@@ -29,6 +29,11 @@ class LevelUpState(State):
         self.choices = choices
         self.selected_idx = None
 
+        self.card_width, self.card_height = 200, 300
+        self.gap = 30
+        self.x_start = (WIDTH - ((self.card_width + self.gap) * len(self.choices) - self.gap)) // 2
+        self.y_start = 150
+
     def run(self):
         while True:
             choice = self.events()
@@ -36,27 +41,23 @@ class LevelUpState(State):
                 return choice
             
             self.draw()
-            self.clock.tick(FPS)
+            # self.clock.tick(FPS)
 
     def draw(self):
         self.screen.fill(GRAY)
-        card_width, card_height = 200, 300
-        gap = 30
-        x_start = (WIDTH - ((card_width + gap) * len(self.choices) - gap)) // 2
-        y_start = 150
 
         for idx, choice in enumerate(self.choices):
-            x = x_start + idx * (card_width + gap)
-            y = y_start
+            x = self.x_start + idx * (self.card_width + self.gap)
+            y = self.y_start
 
             color = (255, 223, 186) if idx == self.selected_idx else (200, 200, 200)
-            pg.draw.rect(self.screen, color, (x, y, card_width, card_height))
-            pg.draw.rect(self.screen, BLACK, (x, y, card_width, card_height), 2)
+            pg.draw.rect(self.screen, color, (x, y, self.card_width, self.card_height))
+            pg.draw.rect(self.screen, BLACK, (x, y, self.card_width, self.card_height), 2)
 
             # Render text
             font = pg.font.Font(None, 24)
             text_surface = font.render(choice.name, True, BLACK)
-            text_rect = text_surface.get_rect(center=(x + card_width // 2, y + card_height // 2))
+            text_rect = text_surface.get_rect(center=(x + self.card_width // 2, y + self.card_height // 2))
             self.screen.blit(text_surface, text_rect)
 
         pg.display.flip()
@@ -134,10 +135,9 @@ class WorldMapState(State):
             mob.act()
     
     def update(self):
-        self.player.tickers_update()
-
         self.all_sprites.update()
         if not self.player_turn:
+            self.player.tickers_update()
             self.enemies_act()
             self.player_turn = True
 
@@ -186,7 +186,8 @@ class WorldMapState(State):
             pg.draw.line(self.screen, LIGHTGREY, (0, horizontal_line_pos), (WIDTH, horizontal_line_pos))
      
     def events(self):
-        for event in pg.event.get():
+        e = pg.event.get()
+        for event in e:
             if event.type == pg.QUIT:
                 self.quit()
 
@@ -255,8 +256,8 @@ class CombatState(State):
 
     def generate_mob(self, mob_type: MobType, mob_centre: tuple[int, int]):
         if mob_type == MobType.Skeleton:
-            mob_level = 2#self.game.current_floor
-            return CombatSkeleton(self.game, (self.mobs_group, ), self.player, mob_centre, mob_level)
+            mob_level = self.game.current_floor
+            return CombatSkeleton(self.game, self.mobs_group, self.player, mob_centre, mob_level)
         else:
             raise NotImplementedError(f'[generate_mob] generation of {mob_type} not implemented yet!')
     
@@ -311,10 +312,6 @@ class CombatState(State):
 
                 elif self.selected_action == "Escape":
                     self.execute_escape()
-
-            if event.type == pg.KEYDOWN:
-                if event.key == pg.K_ESCAPE:
-                    self.quit()
                                
     def update_action_hover(self, mouse_pos):
         for action in self.actions:
@@ -369,6 +366,7 @@ class CombatState(State):
             if enemy.rect.collidepoint(mouse_pos) or target_name_rect.collidepoint(mouse_pos):
                 attack_data = self.player.attack_action(enemy)
                 self.combat_log.add_attack_message(attack_data, 'Player', enemy.name)
+                print()
 
                 self.player_turn=False
        
@@ -422,16 +420,12 @@ class CombatState(State):
 
     ### drawing
     def draw(self):
-        # pg.display.set_caption("{:.2f}".format(self.clock.get_fps()))
         self.screen.fill(BLACK)
 
         self.draw_enemies()
         self.draw_player()
-        self.draw_actions()
-        self.draw_taget_box()
-        self.draw_targets()
-        self.draw_status_effect_boxes()
-        self.combat_log.draw()
+
+        self.draw_ui()
 
         if self.end_screen_timer is not None:
             if self.player.is_alive:
@@ -440,6 +434,13 @@ class CombatState(State):
                 self.draw_defeat_message()
 
         pg.display.flip()
+
+    def draw_ui(self):
+        self.draw_actions()
+        self.draw_taget_box()
+        self.draw_targets()
+        self.draw_status_effect_boxes()
+        self.combat_log.draw()
 
     def draw_enemies(self):
         ### drawing enemies
@@ -721,6 +722,7 @@ class HubState(State):
     def events(self):
         mouse_pos = pg.mouse.get_pos()
 
+        # hover effects
         if self.current_area is None:
             for area_name, area in self.hub_areas.items():
                 area["hovered"] = area["rect"].collidepoint(mouse_pos)
