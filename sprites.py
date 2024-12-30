@@ -550,14 +550,10 @@ class MapMob(GameObject):
     def get_random_valid_roam_goal(self, distance=5):
         x = random.randint(self.x_pos-distance, self.x_pos+distance)
         y = random.randint(self.y_pos-distance, self.y_pos+distance)
-        x = int(min(GRIDWIDTH, max(0, x)))
-        y = int(min(GRIDHEIGHT, max(0, y)))
-        try:
-            if self.map.check_if_pos_is_floor((x, y)):
-                return x, y
-        except:
-            print('x, y', x, y)
-            exit()
+        x = int(min(GRIDWIDTH-1, max(1, x)))
+        y = int(min(GRIDHEIGHT-1, max(1, y)))
+        if self.map.check_if_pos_is_floor((x, y)):
+            return x, y
 
         return self.get_random_valid_roam_goal(distance)
     

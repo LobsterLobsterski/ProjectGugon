@@ -4,6 +4,7 @@ from Dice import DiceGroup, Die
 from tickers import Skill
 
 class CombatLog:
+    LOG_LENGTH_LIMIT = 48
     def __init__(self, screen, rect, font=None, max_messages=10):
         """
         Initialize the CombatLog.
@@ -23,6 +24,22 @@ class CombatLog:
     def check_messages(self):
         while len(self.messages) > self.max_messages:
             self.messages.pop(0)
+
+    def add_message(self, message: str, color: tuple[int, int, int]):
+        if len(message) > self.LOG_LENGTH_LIMIT:
+            words = message.split(' ')
+            print('words', words)
+            for _ in range(2):
+                half_of_message = ''
+                while len(half_of_message) < self.LOG_LENGTH_LIMIT and words:
+                    half_of_message += words.pop(0)+' '
+
+                self.messages.append((half_of_message, color))
+            
+        else:
+            self.messages.append((message, color))
+
+        self.check_messages()
 
     def add_attack_message(self, attack_data: dict, user_name:str, target_name: str, color=None):
         """
@@ -60,26 +77,22 @@ class CombatLog:
             if damage_received:
                 damage_message = f'{damage_message} and received {damage_received} from biteback!'
 
-            self.messages.append((hit_message, hit_color))
-            self.messages.append((damage_message, damage_color))
+            self.add_message(hit_message, hit_color)
+            self.add_message(damage_message, damage_color)
 
         else:
             hit_color = (120, 120, 255)
-            self.messages.append((f'{user_name} attacked {target_name} and missed! ({attack_roll}+{attack_bonus})', hit_color))
-
-
-        self.check_messages()
+            self.add_message(f'{user_name} attacked {target_name} and missed! ({attack_roll}+{attack_bonus})', hit_color)
 
     def add_defend_message(self, user_name: str):
-        self.messages.append((f'{user_name} defends!', self.color))
-        self.check_messages()
+        self.add_message(f'{user_name} defends!', self.color)
 
     def add_status_effect_message(self, skill_report: dict, user_name: str, receiver_name: str, is_standalone_skill=True):
         skill_name = skill_report['name']
         skill_effects = skill_report['effects']
 
         if is_standalone_skill:
-            self.messages.append((f'{user_name} used {skill_name}!', self.color))
+            self.add_message(f'{user_name} used {skill_name}!', self.color)
         
         for effect in skill_effects:
             stat = effect['stat'].replace('_', ' ').capitalize()
@@ -91,17 +104,14 @@ class CombatLog:
             elif isinstance(value, Die) or isinstance(value, DiceGroup):
                 change_word = 'increased'
             
-            # temp: this is wrong
-            self.messages.append((f"{receiver_name}'s {stat} {change_word} by {value}!", self.color))
-
-        self.check_messages()
+            self.add_message(f"{receiver_name}'s {stat} {change_word} by {value}!", self.color)
 
     def add_attack_skill_message(self, skill_reports: dict[dict], user_name: str, target_name: str):
             skill_name = skill_reports['name']
             status_effect_reports = skill_reports['Status Effects']
             attack_reports = skill_reports['Attacks']
 
-            self.messages.append((f'{user_name} used {skill_name} on {target_name}!', self.color))
+            self.add_message(f'{user_name} used {skill_name} on {target_name}!', self.color)
             for status_effect_report in status_effect_reports:
                 self.add_status_effect_message(status_effect_report, user_name, target_name, is_standalone_skill=False)
 
@@ -109,8 +119,7 @@ class CombatLog:
                 self.add_attack_message(attack_report, user_name, target_name)
     
     def add_escape_message(self, user_name: str):
-        self.messages.append((f'{user_name} tries to escape!', self.color))
-        self.check_messages()
+        self.add_message(f'{user_name} tries to escape!', self.color)
 
     def add_enemy_message(self, report: dict, enemy_name: str, target_name: str):
         if 'is_hit' in report:
