@@ -657,13 +657,13 @@ class CombatCrature(Creature):
         '''
         self.modify_behaviour_tree_dict = {}
 
+        # temp: because of the btd we need to do first level up before initing btd
         self.level_up()
 
         # key: [on_false, on_true]
         # has the initial collection of collables needed to construct a behaviour tree
         self.behaviour_tree_dict = {}
         ###
-
 
     def make_attack(self, target: Creature) -> dict[str, any]:
         roll = Die(20).roll()
@@ -723,7 +723,6 @@ class CombatCrature(Creature):
             self.replace_skill(gain)
             if isinstance(gain, Skill):
                 if gain.name in self.modify_behaviour_tree_dict:
-
                     self.modify_behaviour_tree(gain)
 
         print('CombatSkeleton levelup: skills;', self.skills)
@@ -734,26 +733,19 @@ class CombatCrature(Creature):
             s.update()
 
 
-class CombatSkeleton(Creature):
+class CombatSkeleton(CombatCrature):
     skeleton_counter=0
     def __init__(self, game, mobs_group: pg.sprite.Group, player: CombatPlayer, centre: tuple[int, int], level=1):
         self.spritesheet = Spritesheet(MobType.Skeleton)
         CombatSkeleton.skeleton_counter+=1
-        super().__init__(game, mobs_group, self.spritesheet.get_sprite(random.randint(0, 2), 0), 
-                         0, 0, 
+        super().__init__(game, player, mobs_group, self.spritesheet.get_sprite(random.randint(0, 2), 0), 
+                         0, 0, self.skeleton_counter,
                          13, 3, 5, 13, 0, DiceGroup([Die(6)]), 
                          SkeletonClass(self.make_attack))
         
         self.all_combat_mobs = mobs_group
         self.image = pg.transform.scale(self.image, (128, 128))
         self.rect = self.image.get_rect(center=centre)
-
-        self.name = f"Skeleton {self.skeleton_counter}"###
-        self.hovered = False###
-        
-        self.player = player###
-        # for now only target is player
-        self.target = self.player###
 
         # triple slash replaces ramage
         self.skill_replace_dict = {
@@ -767,8 +759,6 @@ class CombatSkeleton(Creature):
             'Armour of Agathys': [None, None, self.is_alone, False]
         }
 
-        # temp: because of the btd we need to do first level up before initing btd
-        self.level_up()###
         # basic skeleton bt
         self.behaviour_tree_dict = {
             self.is_alone: [self.is_opponent_distracted, self.is_rampage_off_cooldown],
@@ -798,75 +788,3 @@ class CombatSkeleton(Creature):
     def is_rampage_off_cooldown(self):
         return not self.skills[1].is_ticking()
     ###
-
-    ### actions
-    def make_attack(self, target: Creature) -> dict[str, any]:###
-        roll = Die(20).roll()
-        is_crit = roll >= self.attributes['crit_range']
-        is_hit = roll+self.attributes['attack'] >= target.attributes['defence']
-        damage_roll_info = {'dealt': {'damage_roll': 0, 'damage_bonus': 0, 'total_received': 0}, 'received': 0}
-        if is_hit:
-            damage_roll_info = self.deal_damage(target, is_crit)
-
-        return {'is_hit': is_hit, 'is_crit': is_crit, 'roll': roll, 'attack_bonus': self.attributes['attack'], 'damage': damage_roll_info}
-    
-    def attack_action(self, target: Creature, *args) -> list[dict]:###
-        attack_data = []
-        for _ in range(self.attributes['attack_number']):
-            results = self.make_attack(target)
-            attack_data.append(results)
-
-        return results
-
-    def defend_action(self, target, *args):###
-        status_effect = StatusEffect("Defence", [('defence', 10)], 1)
-        self.status_effects.append(status_effect)
-        return status_effect.apply_effect(self)
-    ###
-
-    def modify_behaviour_tree(self, gain: Skill):###
-        previous_node, connect_to_prev_on_true, next_node, connect_to_next_on_true = self.modify_behaviour_tree_dict[gain.name]
-
-        condition_node = lambda *args: not gain.is_ticking()
-        execution_node = lambda self_target, target, *args: gain.activate(target, self_target)
-        # create subtree
-        if connect_to_next_on_true:
-            array = [execution_node, next_node]
-        else:
-            array = [next_node, execution_node]
-
-        sub_tree = {condition_node: array}
-        
-        # add subtree and connect it
-        if previous_node is None:
-            sub_tree.update(self.behaviour_tree_dict)
-            self.behaviour_tree_dict = sub_tree
-        else:
-            self.behaviour_tree_dict.update(sub_tree)
-            prev_node_connection_idx = int(connect_to_prev_on_true)
-            self.behaviour_tree_dict[previous_node][prev_node_connection_idx] = condition_node
-
-    def replace_skill(self, gain):###
-        if gain.name in self.skill_replace_dict:
-            for skill in self.skills:
-                if skill.name == self.skill_replace_dict[gain.name]:
-                    self.skills.remove(skill)
-                    break
-    
-    def level_up(self):###
-        gains = super().level_up()
-        for gain in gains:
-            self.replace_skill(gain)
-            if isinstance(gain, Skill):
-                if gain.name in self.modify_behaviour_tree_dict:
-
-                    self.modify_behaviour_tree(gain)
-
-        print('CombatSkeleton levelup: skills;', self.skills)
-
-    def tickers_update(self):###
-        super().tickers_update()
-        for s in self.skills:
-            s.update()
-
-
