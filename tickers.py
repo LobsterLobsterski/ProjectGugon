@@ -145,7 +145,7 @@ class Distract(Skill):
         super().__init__('Distract', False, Distract.effect, cooldown)
 
     def effect(target, *args) -> dict:
-        status_effect = StatusEffect('Distracted', [('defence', -10)], 0)
+        status_effect = StatusEffect('Distracted', [('defence', -5)], 0)
         target.status_effects.append(status_effect)
         return status_effect.apply_effect(target)
 

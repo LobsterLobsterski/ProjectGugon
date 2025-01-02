@@ -50,13 +50,14 @@ class BehaviourTree:
     def find_action(self, current_node=None) -> Callable:
         '''
         We search the tree and return the method (action)
-        which will be ran by the mob
+        which will be ran by the mob.
         '''
         if current_node == None:
             current_node = self.root
 
         if isinstance(current_node, ControlFlowNode):
             condition_result = current_node.activate()
+            #idx=int(condition_result)
             if condition_result:
                 return self.find_action(current_node.get_child_by_index(1))
             return self.find_action(current_node.get_child_by_index(0))

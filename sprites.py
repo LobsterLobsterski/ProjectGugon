@@ -117,7 +117,6 @@ class Wall(GameObject):
                             x_pos,
                             y_pos
                             )
-        # self.image.fill(GREEN)
         self.rect.x = x_pos * TILESIZE
         self.rect.y = y_pos * TILESIZE
 
@@ -189,12 +188,6 @@ class Creature(GameObject):
         self.skills =  []
 
         self.is_alive = True
-
-        ### bobing
-        self.original_y = ...
-        self.bob_timer = None
-        self.bob_duration = 300
-        self.bob_offset = -10
 
     def add_experience(self, experience_points: int):
         self.experience += experience_points
@@ -287,37 +280,6 @@ class Creature(GameObject):
 
             self.heal(self.attributes['regeneration'])
 
-    def start_bobbing(self):
-        '''
-        Initiates the bobbing animation
-        '''
-        self.bob_timer = pg.time.get_ticks()
-        self.original_y = self.rect.y
-
-    def update_bobbing(self) -> bool:
-        '''
-        updates the bob animation and
-        returns bool indicating whether or not
-        creature is still bobbing
-        '''
-        if self.bob_timer is None:
-            return False
-
-        elapsed = pg.time.get_ticks() - self.bob_timer
-        if elapsed < self.bob_duration:
-            # Calculate interpolation between original_y and bob_offset
-            progress = elapsed / self.bob_duration
-            if progress < 0.5:
-                self.rect.y = self.original_y + self.bob_offset * progress * 2  # Bob up
-            else:
-                self.rect.y = self.original_y + self.bob_offset * (2 - progress * 2)  # Bob down
-        else:
-            # Reset after animation
-            self.rect.y = self.original_y
-            self.bob_timer = None
-        
-        return True
-    
     def update(self):
         pass
 
@@ -505,6 +467,7 @@ class MapMob(GameObject):
         self.path_iterator = iter(self.path)
         ###
         self.last_known_player_pos = self.player.get_position()
+        self.behaviour_tree = ...
       
     def act(self):
         action = self.bahaviour_tree.find_action()
@@ -606,18 +569,17 @@ class Goblin(MapMob):
     ### complex/specific conditions
     ###
 
-
 class Skeleton(MapMob):
     def __init__(self, game, map, player, all_sprites_groups: pg.sprite.Group, all_map_mobs_group: pg.sprite.Group, init_x_pos: int, init_y_pos: int):
         super().__init__(game, map, player, all_sprites_groups, all_map_mobs_group, init_x_pos, init_y_pos, MobType.Skeleton)
 
-        behaviour_tree = {
+        behaviour_tree_dict = {
             self.detect_player: [self.roam, self.in_engage_range], 
             self.in_engage_range: [self.follow_path, self.engage]
         }
-        self.bahaviour_tree = self.init_behaviour(behaviour_tree)
+        self.bahaviour_tree = self.init_behaviour(behaviour_tree_dict)
 
-class CombatCrature(Creature):
+class CombatCreature(Creature):
     def __init__(self, game, player: CombatPlayer, mobs_group: pg.sprite.Group, 
                  image: pg.Surface, x: int, y: int, mob_counter: int, 
                  health: int, damage: int, attack: int, defence: int, armour: int, 
@@ -626,6 +588,14 @@ class CombatCrature(Creature):
         self.all_combat_mobs = mobs_group
         self.name = f"{type(self).__name__.replace('Combat', '')} {mob_counter}"
         self.hovered = False
+
+        ### bobing
+        self.original_y = ...
+        self.bob_timer = None
+        self.bob_duration = 300
+        self.bob_offset = -10
+        ###
+
         self.player = player
         # for now only target is player
         self.target = self.player
@@ -660,6 +630,7 @@ class CombatCrature(Creature):
         # has the initial collection of collables needed to construct a behaviour tree
         self.behaviour_tree_dict = {}
         ###
+        self.bahaviour_tree = ...
 
     def make_attack(self, target: Creature) -> dict[str, any]:
         roll = Die(20).roll()
@@ -679,10 +650,15 @@ class CombatCrature(Creature):
 
         return results
     
-    def defend_action(self, target, *args):###
+    def defend_action(self, target, *args) -> dict:
         status_effect = StatusEffect("Defence", [('defence', 10)], 1)
         self.status_effects.append(status_effect)
         return status_effect.apply_effect(self)
+    
+    def fight(self) -> dict:
+        self.start_bobbing()
+        action = self.bahaviour_tree.find_action()
+        return action(self.target, self)
     
     def modify_behaviour_tree(self, gain: Skill):
         previous_node, connect_to_prev_on_true, next_node, connect_to_next_on_true = self.modify_behaviour_tree_dict[gain.name]
@@ -728,8 +704,43 @@ class CombatCrature(Creature):
         for s in self.skills:
             s.update()
 
+    def start_bobbing(self):
+        '''
+        Initiates the bobbing animation
+        '''
+        self.bob_timer = pg.time.get_ticks()
+        self.original_y = self.rect.y
 
-class CombatSkeleton(CombatCrature):
+    def update_bobbing(self) -> bool:
+        '''
+        updates the bob animation and
+        returns bool indicating whether or not
+        creature is still bobbing
+        '''
+        if self.bob_timer is None:
+            return False
+
+        elapsed = pg.time.get_ticks() - self.bob_timer
+        if elapsed < self.bob_duration:
+            # Calculate interpolation between original_y and bob_offset
+            progress = elapsed / self.bob_duration
+            if progress < 0.5:
+                self.rect.y = self.original_y + self.bob_offset * progress * 2  # Bob up
+            else:
+                self.rect.y = self.original_y + self.bob_offset * (2 - progress * 2)  # Bob down
+        else:
+            # Reset after animation
+            self.rect.y = self.original_y
+            self.bob_timer = None
+        
+        return True
+    
+    ###basic conditions
+    def is_alone(self):
+        return len(self.all_combat_mobs) == 1
+    ###
+
+class CombatSkeleton(CombatCreature):
     skeleton_counter=0
     def __init__(self, game, mobs_group: pg.sprite.Group, player: CombatPlayer, centre: tuple[int, int], level=1):
         self.spritesheet = Spritesheet(MobType.Skeleton)
@@ -739,7 +750,6 @@ class CombatSkeleton(CombatCrature):
                          13, 3, 5, 13, 0, DiceGroup([Die(6)]), 
                          SkeletonClass(self.make_attack))
         
-        self.all_combat_mobs = mobs_group
         self.image = pg.transform.scale(self.image, (128, 128))
         self.rect = self.image.get_rect(center=centre)
 
@@ -768,15 +778,7 @@ class CombatSkeleton(CombatCrature):
 
         self.bahaviour_tree = self.init_behaviour(self.behaviour_tree_dict)
 
-
-    def fight(self) -> dict:
-        self.start_bobbing()
-        action = self.bahaviour_tree.find_action()
-        return action(self.target, self)
-
     ### conditions
-    def is_alone(self):
-        return len(self.all_combat_mobs) == 1
     def is_opponent_distracted(self):
         return 'Distracted' in self.player.status_effects
     def is_distract_off_cooldown(self):
