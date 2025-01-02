@@ -760,17 +760,16 @@ class CombatSkeleton(CombatCreature):
         
         self.modify_behaviour_tree_dict = {
             # 'Rampage': [self.is_alone, True, self.attack_action, False],
-            # 'Distract': [self.is_alone, False, self.is_rampage_off_cooldown, False],
-            'Necrotic Strikes': [self.is_alone, True, self.is_rampage_off_cooldown, False],
+            # 'Distract': [self.is_alone, False, self.can_rampage, False],
+            'Necrotic Strikes': [self.is_alone, True, self.can_distract, False],
             'Armour of Agathys': [None, None, self.is_alone, False]
         }
 
         # basic skeleton bt
         self.behaviour_tree_dict = {
-            self.is_alone: [self.is_opponent_distracted, self.is_rampage_off_cooldown],
-            self.is_opponent_distracted: [self.is_distract_off_cooldown, self.is_rampage_off_cooldown], 
-            self.is_distract_off_cooldown: [self.is_rampage_off_cooldown, self.skills[0].activate],
-            self.is_rampage_off_cooldown: [self.attack_action, self.skills[1].activate]
+            self.is_alone: [self.can_distract, self.can_rampage],
+            self.can_distract: [self.can_rampage, self.skills[0].activate], 
+            self.can_rampage: [self.attack_action, self.skills[1].activate]
         }
 
         for _ in range(level-1):
@@ -779,10 +778,9 @@ class CombatSkeleton(CombatCreature):
         self.bahaviour_tree = self.init_behaviour(self.behaviour_tree_dict)
 
     ### conditions
-    def is_opponent_distracted(self):
-        return 'Distracted' in self.player.status_effects
-    def is_distract_off_cooldown(self):
-        return not self.skills[0].is_ticking()
-    def is_rampage_off_cooldown(self):
+    def can_distract(self):
+        # player not distracted and skill not on cooldown
+        return 'Distracted' in self.player.status_effects and not self.skills[0].is_ticking()
+    def can_rampage(self):
         return not self.skills[1].is_ticking()
     ###
