@@ -14,7 +14,7 @@ class BehaviourNode:
         return f'{type(self).__name__}(name: {self.name}, parent: {self.parent})'
         
     
-class ControlFlowNode(BehaviourNode):
+class ConditionNode(BehaviourNode):
     def __init__(self, name: str, parent: BehaviourNode, condition: Callable, children: list[BehaviourNode]):
         super().__init__(name, parent)
         self.condition = condition
@@ -55,7 +55,7 @@ class BehaviourTree:
         if current_node == None:
             current_node = self.root
 
-        if isinstance(current_node, ControlFlowNode):
+        if isinstance(current_node, ConditionNode):
             condition_result = current_node.activate()
             #idx=int(condition_result)
             if condition_result:
@@ -72,7 +72,7 @@ class BehaviourTree:
                 if method in tree:
                     ### condition method child
                     children_nodes = get_children_nodes(tree[method], recursionLevel+1)
-                    node = ControlFlowNode(method.__name__, None, method, children_nodes)
+                    node = ConditionNode(method.__name__, None, method, children_nodes)
                     for c in children_nodes:
                         c.parent = node
 
@@ -87,7 +87,7 @@ class BehaviourTree:
         root_condition_method, root_children_methods = next(iter(tree.items()))
         children_nodes = get_children_nodes(root_children_methods)
 
-        root = ControlFlowNode(root_condition_method.__name__, None, root_condition_method, children_nodes)
+        root = ConditionNode(root_condition_method.__name__, None, root_condition_method, children_nodes)
         for c in children_nodes:
             c.parent = root
 
@@ -100,7 +100,7 @@ class BehaviourTree:
         
         for idx, child in enumerate(node.children):
             print('\t'*(recursion_level+1), '\x1B[3mon False:\x1B[23m' if idx%2==0 else '\x1B[3mon True:\x1B[23m',child)
-            if isinstance(child, ControlFlowNode):
+            if isinstance(child, ConditionNode):
                 self.print_tree(child, recursion_level+1)
 
                 
