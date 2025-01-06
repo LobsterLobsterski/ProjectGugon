@@ -173,13 +173,13 @@ class CellularAutomata:
     
 
 class DrunkenStumble:
-    def initialise_map(tile_width: int, tile_height: int):
+    def _initialise_map(tile_width: int, tile_height: int):
         return [
             [TileType.Wall for _ in range(tile_width)]
             for _ in range(tile_height)
         ] 
     
-    def move_randomly(x, y):
+    def _move_randomly(x, y):
         p = random.randint(1, 4)
         if p == 1:
             y+=1
@@ -192,23 +192,23 @@ class DrunkenStumble:
 
         return x, y
 
-    def set_hulks_loose(map: list[list[TileType]], hulk_number: int, steps_per_hulk: int) -> list[list[TileType]]:
+    def _set_hulks_loose(map: list[list[TileType]], hulk_number: int, steps_per_hulk: int) -> list[list[TileType]]:
         x, y = random.randint(0, len(map[0])-1), random.randint(0, len(map)-1)
         map[y][x] = TileType.Floor
         for _ in range(hulk_number):
             x, y = _get_random_floor(map)
             for _ in range(steps_per_hulk):
-                x, y = DrunkenStumble.move_randomly(x, y)
+                x, y = DrunkenStumble._move_randomly(x, y)
                 if _is_within_map_bounds(x, y, len(map[0])-1, len(map)-1):
                     map[y][x] = TileType.Floor
 
         return map
 
     def create_map(tile_width: int, tile_height: int, collision_group: Group, background_group: Group):
-        map = DrunkenStumble.initialise_map(tile_width, tile_height)
+        map = DrunkenStumble._initialise_map(tile_width, tile_height)
         hulk_number = 10
         steps_per_hulk = 1500
-        map = DrunkenStumble.set_hulks_loose(map, hulk_number, steps_per_hulk)
+        map = DrunkenStumble._set_hulks_loose(map, hulk_number, steps_per_hulk)
         map = _remove_unreachable_areas(map)
         _encase_map(map, tile_width, tile_height)
         _create_walls_floors(map, collision_group, background_group)

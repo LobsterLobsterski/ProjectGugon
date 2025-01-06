@@ -513,8 +513,8 @@ class MapMob(GameObject):
     def get_random_valid_roam_goal(self, distance=5):
         x = random.randint(self.x_pos-distance, self.x_pos+distance)
         y = random.randint(self.y_pos-distance, self.y_pos+distance)
-        x = int(min(GRIDWIDTH-1, max(1, x)))
-        y = int(min(GRIDHEIGHT-1, max(1, y)))
+        x = int(min(GRIDWIDTH-1, max(1, x-1)))
+        y = int(min(GRIDHEIGHT-1, max(1, y-1)))
         if self.map.check_if_pos_is_floor((x, y)):
             return x, y
 
@@ -761,7 +761,7 @@ class CombatSkeleton(CombatCreature):
         self.modify_behaviour_tree_dict = {
             # 'Rampage': [self.is_alone, True, self.attack_action, False],
             # 'Distract': [self.is_alone, False, self.can_rampage, False],
-            'Necrotic Strikes': [self.is_alone, True, self.can_distract, False],
+            'Necrotic Strikes': [self.is_alone, True, self.can_rampage, False],
             'Armour of Agathys': [None, None, self.is_alone, False]
         }
 
